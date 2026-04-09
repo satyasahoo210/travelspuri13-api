@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+enum RoomStatus {
+  AVAILABLE
+  MAINTENANCE
+  OCCUPIED
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum BookingSource {
+  DIRECT
+  OTA
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIAL
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String
+  role       UserRole @default(STAFF)
+  property   Property @relation(fields: [propertyId], references: [id])
+  propertyId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Property {
+  id        String     @id @default(uuid())
+  name      String
+  address   String
+  timezone  String
+  ownerId   String
+  users     User[]
+  roomTypes RoomType[]
+  bookings  Booking[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model RoomType {
+  id           String        @id @default(uuid())
+  name         String
+  capacity     Int
+  property     Property      @relation(fields: [propertyId], references: [id])
+  propertyId   String
+  rooms        Room[]
+  inventory    Inventory[]
+  bookingRooms BookingRoom[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Room {
+  id         String     @id @default(uuid())
+  roomNumber String
+  status     RoomStatus @default(AVAILABLE)
+  roomType   RoomType   @relation(fields: [roomTypeId], references: [id])
+  roomTypeId String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@unique([roomTypeId, roomNumber])
+}
+
+model Inventory {
+  id             String   @id @default(uuid())
+  roomType       RoomType @relation(fields: [roomTypeId], references: [id])
+  roomTypeId     String
+  date           DateTime
+  totalRooms     Int
+  availableRooms Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([roomTypeId, date])
+  @@index([roomTypeId, date])
+}
+
+model Guest {
+  id            String    @id @default(uuid())
+  name          String
+  phone         String?
+  email         String?
+  idProofType   String?
+  idProofNumber String?
+  bookings      Booking[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Booking {
+  id           String        @id @default(uuid())
+  guest        Guest         @relation(fields: [guestId], references: [id])
+  guestId      String
+  property     Property      @relation(fields: [propertyId], references: [id])
+  propertyId   String
+  source       BookingSource @default(DIRECT)
+  status       BookingStatus @default(CONFIRMED)
+  checkInDate  DateTime
+  checkOutDate DateTime
+  bookingRooms BookingRoom[]
+  billing      Billing?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([propertyId, checkInDate])
+}
+
+model BookingRoom {
+  id         String   @id @default(uuid())
+  booking    Booking  @relation(fields: [bookingId], references: [id])
+  bookingId  String
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id])
+  roomTypeId String
+  quantity   Int
+}
+
+model Billing {
+  id            String        @id @default(uuid())
+  booking       Booking       @relation(fields: [bookingId], references: [id])
+  bookingId     String        @unique
+  totalAmount   Decimal       @db.Decimal(10, 2)
+  taxAmount     Decimal       @db.Decimal(10, 2)
+  paymentStatus PaymentStatus @default(PENDING)
+  currency      String        @default("INR")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
