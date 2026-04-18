@@ -10,6 +10,7 @@ import { GuestModule } from './modules/guest/guest.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { ChannelModule } from './modules/channel/channel.module';
 import { PrismaModule } from './common/prisma/prisma.module';
+import { PricingModule } from './modules/pricing/pricing.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
     GuestModule,
     BillingModule,
     ChannelModule,
+    PricingModule,
   ],
 })
 export class AppModule {}

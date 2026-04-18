@@ -37,3 +37,5 @@ Thumbs.db
 
 # IDE - IntelliJ/WebStorm
 .idea/
+
+/prisma/generated

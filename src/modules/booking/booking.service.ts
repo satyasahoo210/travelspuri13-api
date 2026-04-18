@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
-import { BookingSource, BookingStatus } from '@prisma/client'
-import { PrismaService } from '../../common/prisma/prisma.service'
-import { RedisService } from '../../common/redis/redis.service'
+import { PrismaService } from '@/common/prisma/prisma.service'
+import { RedisService } from '@/common/redis/redis.service'
+import { BookingStatus } from '@/generated/prisma/client'
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { InventoryService } from '../inventory/inventory.service'
+import { PricingService } from '../pricing/pricing.service'
 import { CreateBookingDto } from './dto/booking.dto'
 
 @Injectable()
@@ -11,6 +12,7 @@ export class BookingService {
     private prisma: PrismaService,
     private inventoryService: InventoryService,
     private redisService: RedisService,
+    private pricingService: PricingService,
   ) {}
 
   async createBooking(dto: CreateBookingDto) {
@@ -18,6 +20,15 @@ export class BookingService {
       dto
     const start = new Date(checkInDate)
     const end = new Date(checkOutDate)
+
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { taxPercentage: true },
+    })
+
+    if (!property) {
+      throw new NotFoundException(`Property ${propertyId} not found`)
+    }
 
     // We only decrease inventory for dates up to checkOutDate - 1 day
     const bookingDates = this.getDatesInRange(start, this.addDays(end, -1))
@@ -48,7 +59,21 @@ export class BookingService {
         }
       }
 
-      // 2. Create Booking
+      // 2. Price Calculation
+      let totalBaseAmount = 0
+      for (const roomItem of rooms) {
+        totalBaseAmount += await this.pricingService.calculateStayPrice(
+          roomItem.roomTypeId,
+          start,
+          end,
+          roomItem.quantity,
+        )
+      }
+
+      const taxAmount = (totalBaseAmount * property.taxPercentage) / 100
+      const totalAmount = totalBaseAmount + taxAmount
+
+      // 3. Create Booking
       const booking = await tx.booking.create({
         data: {
           guestId,
@@ -67,12 +92,12 @@ export class BookingService {
         include: { bookingRooms: true },
       })
 
-      // 3. Create Billing (Basic)
+      // 4. Create Billing
       await tx.billing.create({
         data: {
           bookingId: booking.id,
-          totalAmount: 1000.0, // Placeholder
-          taxAmount: 180.0, // Placeholder
+          totalAmount: totalAmount,
+          taxAmount: taxAmount,
           paymentStatus: 'PENDING',
         },
       })

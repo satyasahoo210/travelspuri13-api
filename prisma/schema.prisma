@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "./generated/prisma"
 }
 
 datasource db {
@@ -45,26 +46,29 @@ model User {
 }
 
 model Property {
-  id        String     @id @default(uuid())
-  name      String
-  address   String
-  timezone  String
-  ownerId   String
-  users     User[]
-  roomTypes RoomType[]
-  bookings  Booking[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id            String     @id @default(uuid())
+  name          String
+  address       String
+  timezone      String
+  ownerId       String
+  taxPercentage Float      @default(0)
+  users         User[]
+  roomTypes     RoomType[]
+  bookings      Booking[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model RoomType {
   id           String        @id @default(uuid())
   name         String
   capacity     Int
+  defaultPrice Decimal       @db.Decimal(10, 2) @default(0)
   property     Property      @relation(fields: [propertyId], references: [id])
   propertyId   String
   rooms        Room[]
   inventory    Inventory[]
+  pricing      Pricing[]
   bookingRooms BookingRoom[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -145,4 +149,18 @@ model Billing {
   currency      String        @default("INR")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+}
+
+model Pricing {
+  id               String   @id @default(uuid())
+  roomType         RoomType @relation(fields: [roomTypeId], references: [id])
+  roomTypeId       String
+  date             DateTime
+  basePrice        Decimal  @db.Decimal(10, 2)
+  seasonalModifier Float    @default(1.0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([roomTypeId, date])
+  @@index([roomTypeId, date])
 }

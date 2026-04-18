@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma/prisma.service';
-import { CreateRoomTypeDto, CreateRoomDto } from './dto/room.dto';
+import { PrismaService } from '@/common/prisma/prisma.service'
+import { Injectable } from '@nestjs/common'
+import { CreateRoomDto, CreateRoomTypeDto } from './dto/room.dto'
 
 @Injectable()
 export class RoomService {
@@ -9,14 +9,14 @@ export class RoomService {
   async createRoomType(dto: CreateRoomTypeDto) {
     return this.prisma.roomType.create({
       data: dto,
-    });
+    })
   }
 
   async createRoom(dto: CreateRoomDto) {
     return this.prisma.$transaction(async (tx) => {
       const room = await tx.room.create({
         data: dto,
-      });
+      })
 
       // Update inventory totalRooms for all existing dates for this room type
       await tx.inventory.updateMany({
@@ -25,16 +25,16 @@ export class RoomService {
           totalRooms: { increment: 1 },
           availableRooms: { increment: 1 },
         },
-      });
+      })
 
-      return room;
-    });
+      return room
+    })
   }
 
   async findRoomTypes(propertyId: string) {
     return this.prisma.roomType.findMany({
       where: { propertyId },
       include: { rooms: true },
-    });
+    })
   }
 }

@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma/prisma.service';
-import { CreateGuestDto } from './dto/create-guest.dto';
+import { PrismaService } from '@/common/prisma/prisma.service'
+import { Injectable } from '@nestjs/common'
+import { CreateGuestDto } from './dto/create-guest.dto'
 
 @Injectable()
 export class GuestService {
@@ -9,16 +9,16 @@ export class GuestService {
   async create(createGuestDto: CreateGuestDto) {
     return this.prisma.guest.create({
       data: createGuestDto,
-    });
+    })
   }
 
   async findAll() {
-    return this.prisma.guest.findMany();
+    return this.prisma.guest.findMany()
   }
 
   async findOne(id: string) {
     return this.prisma.guest.findUnique({
       where: { id },
-    });
+    })
   }
 }

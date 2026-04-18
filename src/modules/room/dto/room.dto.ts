@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { IsInt, IsNotEmpty, IsString, Min } from 'class-validator'
+import { IsInt, IsNotEmpty, IsNumber, IsString, Min } from 'class-validator'
 
 export class CreateRoomTypeDto {
   @ApiProperty({ example: 'Deluxe Suite' })
@@ -11,6 +11,11 @@ export class CreateRoomTypeDto {
   @IsInt()
   @Min(1)
   capacity!: number
+
+  @ApiProperty({ example: 1000.0 })
+  @IsNumber()
+  @Min(0)
+  defaultPrice!: number
 
   @ApiProperty({ example: 'prop_123' })
   @IsString()

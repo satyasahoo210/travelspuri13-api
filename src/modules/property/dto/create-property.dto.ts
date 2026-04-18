@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreatePropertyDto {
@@ -21,4 +21,9 @@ export class CreatePropertyDto {
   @IsString()
   @IsNotEmpty()
   ownerId!: string;
+
+  @ApiProperty({ example: 12.0, description: 'Tax percentage for this property' })
+  @IsNumber()
+  @Min(0)
+  taxPercentage!: number;
 }

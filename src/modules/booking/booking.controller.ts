@@ -1,8 +1,8 @@
-import { Controller, Post, Body, UseGuards, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { BookingService } from './booking.service';
-import { CreateBookingDto } from './dto/booking.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
+import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common'
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { BookingService } from './booking.service'
+import { CreateBookingDto } from './dto/booking.dto'
 
 @ApiTags('Booking')
 @ApiBearerAuth()
@@ -14,12 +14,12 @@ export class BookingController {
   @Post()
   @ApiOperation({ summary: 'Create a new booking' })
   async create(@Body() createBookingDto: CreateBookingDto) {
-    return this.bookingService.createBooking(createBookingDto);
+    return this.bookingService.createBooking(createBookingDto)
   }
 
   @Post('cancel/:id')
   @ApiOperation({ summary: 'Cancel an existing booking' })
   async cancel(@Param('id') id: string) {
-    return this.bookingService.cancelBooking(id);
+    return this.bookingService.cancelBooking(id)
   }
 }

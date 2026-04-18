@@ -1,7 +1,7 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { InventoryService } from './inventory.service';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
+import { Controller, Get, Query, UseGuards } from '@nestjs/common'
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { InventoryService } from './inventory.service'
 
 @ApiTags('Inventory')
 @ApiBearerAuth()
@@ -21,6 +21,6 @@ export class InventoryController {
       roomTypeId,
       new Date(startDate),
       new Date(endDate),
-    );
+    )
   }
 }
