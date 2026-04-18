@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client"
-  output   = "./generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -8,7 +9,9 @@ datasource db {
 }
 
 enum UserRole {
-  ADMIN
+  SUPER_ADMIN
+  TENANT_ADMIN
+  PROPERTY_MANAGER
   STAFF
 }
 
@@ -16,54 +19,115 @@ enum RoomStatus {
   AVAILABLE
   MAINTENANCE
   OCCUPIED
+  DIRTY
 }
 
 enum BookingStatus {
   CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
   CANCELLED
+  NO_SHOW
 }
 
 enum BookingSource {
   DIRECT
   OTA
+  BOOKING_ENGINE
 }
 
 enum PaymentStatus {
   PENDING
   PAID
   PARTIAL
+  REFUNDED
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Tenant {
+  id           String       @id @default(uuid())
+  name         String
+  email        String?      @unique
+  featureFlags Json? // fnb_enabled, stock_enabled, hrms_enabled, etc.
+  properties   Property[]
+  users        User[]
+  guests       Guest[]
+  stockItems   StockItem[]
+  suppliers    Supplier[]
+  employees    Employee[]
+  bookings     Booking[]
+  billings     Billing[]
+  payments     Payment[]
+  expenses     Expense[]
+  pricing      Pricing[]
+  inventory    Inventory[]
+  products     Product[]
+  orders       Order[]
+  orderItems   OrderItem[]
+  attendance   Attendance[]
+  leaves       Leave[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
 
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
+  id         String         @id @default(uuid())
+  email      String         @unique
   password   String
-  role       UserRole @default(STAFF)
-  property   Property @relation(fields: [propertyId], references: [id])
-  propertyId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  name       String?
+  role       UserRole       @default(STAFF)
+  tenant     Tenant         @relation(fields: [tenantId], references: [id])
+  tenantId   String
+  properties UserProperty[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 }
 
 model Property {
-  id            String     @id @default(uuid())
+  id            String         @id @default(uuid())
   name          String
   address       String
   timezone      String
-  ownerId       String
-  taxPercentage Float      @default(0)
-  users         User[]
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  tenantId      String
+  taxPercentage Float          @default(0)
+  users         UserProperty[]
   roomTypes     RoomType[]
   bookings      Booking[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  expenses      Expense[]
+  products      Product[]
+  orders        Order[]
+  services      Service[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model UserProperty {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  property   Property @relation(fields: [propertyId], references: [id])
+  propertyId String
+
+  @@unique([userId, propertyId])
 }
 
 model RoomType {
   id           String        @id @default(uuid())
   name         String
   capacity     Int
-  defaultPrice Decimal       @db.Decimal(10, 2) @default(0)
+  defaultPrice Decimal       @default(0) @db.Decimal(10, 2)
   property     Property      @relation(fields: [propertyId], references: [id])
   propertyId   String
   rooms        Room[]
@@ -90,6 +154,8 @@ model Inventory {
   id             String   @id @default(uuid())
   roomType       RoomType @relation(fields: [roomTypeId], references: [id])
   roomTypeId     String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  tenantId       String
   date           DateTime
   totalRooms     Int
   availableRooms Int
@@ -97,7 +163,7 @@ model Inventory {
   updatedAt      DateTime @updatedAt
 
   @@unique([roomTypeId, date])
-  @@index([roomTypeId, date])
+  @@index([tenantId, date])
 }
 
 model Guest {
@@ -107,26 +173,34 @@ model Guest {
   email         String?
   idProofType   String?
   idProofNumber String?
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  tenantId      String
   bookings      Booking[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
 
 model Booking {
-  id           String        @id @default(uuid())
-  guest        Guest         @relation(fields: [guestId], references: [id])
+  id           String           @id @default(uuid())
+  guest        Guest            @relation(fields: [guestId], references: [id])
   guestId      String
-  property     Property      @relation(fields: [propertyId], references: [id])
+  property     Property         @relation(fields: [propertyId], references: [id])
   propertyId   String
-  source       BookingSource @default(DIRECT)
-  status       BookingStatus @default(CONFIRMED)
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
+  tenantId     String
+  source       BookingSource    @default(DIRECT)
+  status       BookingStatus    @default(CONFIRMED)
   checkInDate  DateTime
   checkOutDate DateTime
   bookingRooms BookingRoom[]
   billing      Billing?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  services     BookingService[]
+  payments     Payment[]
+  orders       Order[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
+  @@index([tenantId, checkInDate])
   @@index([propertyId, checkInDate])
 }
 
@@ -139,10 +213,35 @@ model BookingRoom {
   quantity   Int
 }
 
+model Service {
+  id              String           @id @default(uuid())
+  name            String
+  description     String?
+  price           Decimal          @db.Decimal(10, 2)
+  property        Property         @relation(fields: [propertyId], references: [id])
+  propertyId      String
+  tenantId        String // Direct link for fast filtering
+  bookingServices BookingService[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model BookingService {
+  id         String  @id @default(uuid())
+  booking    Booking @relation(fields: [bookingId], references: [id])
+  bookingId  String
+  service    Service @relation(fields: [serviceId], references: [id])
+  serviceId  String
+  quantity   Int     @default(1)
+  totalPrice Decimal @db.Decimal(10, 2)
+}
+
 model Billing {
   id            String        @id @default(uuid())
   booking       Booking       @relation(fields: [bookingId], references: [id])
   bookingId     String        @unique
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  tenantId      String
   totalAmount   Decimal       @db.Decimal(10, 2)
   taxAmount     Decimal       @db.Decimal(10, 2)
   paymentStatus PaymentStatus @default(PENDING)
@@ -151,10 +250,38 @@ model Billing {
   updatedAt     DateTime      @updatedAt
 }
 
+model Payment {
+  id        String        @id @default(uuid())
+  booking   Booking       @relation(fields: [bookingId], references: [id])
+  bookingId String
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  tenantId  String
+  amount    Decimal       @db.Decimal(10, 2)
+  method    String // CASH, CARD, ONLINE
+  status    PaymentStatus @default(PAID)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  property    Property @relation(fields: [propertyId], references: [id])
+  propertyId  String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  tenantId    String
+  amount      Decimal  @db.Decimal(10, 2)
+  category    String
+  description String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
 model Pricing {
   id               String   @id @default(uuid())
   roomType         RoomType @relation(fields: [roomTypeId], references: [id])
   roomTypeId       String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  tenantId         String
   date             DateTime
   basePrice        Decimal  @db.Decimal(10, 2)
   seasonalModifier Float    @default(1.0)
@@ -162,5 +289,108 @@ model Pricing {
   updatedAt        DateTime @updatedAt
 
   @@unique([roomTypeId, date])
-  @@index([roomTypeId, date])
+  @@index([tenantId, date])
+}
+
+// F&B Module
+model Product {
+  id         String      @id @default(uuid())
+  name       String
+  category   String
+  price      Decimal     @db.Decimal(10, 2)
+  property   Property    @relation(fields: [propertyId], references: [id])
+  propertyId String
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  tenantId   String
+  orders     OrderItem[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  property    Property    @relation(fields: [propertyId], references: [id])
+  propertyId  String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  tenantId    String
+  booking     Booking?    @relation(fields: [bookingId], references: [id])
+  bookingId   String?
+  tableNumber String?
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @db.Decimal(10, 2)
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  order     Order   @relation(fields: [orderId], references: [id])
+  orderId   String
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  tenantId  String
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+}
+
+// Stock Module
+model StockItem {
+  id        String   @id @default(uuid())
+  name      String
+  category  String
+  quantity  Int      @default(0)
+  unit      String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Supplier {
+  id        String   @id @default(uuid())
+  name      String
+  contact   String?
+  email     String?
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  tenantId  String
+  createdAt DateTime @default(now())
+}
+
+// HR Module
+model Employee {
+  id         String       @id @default(uuid())
+  name       String
+  role       String
+  tenant     Tenant       @relation(fields: [tenantId], references: [id])
+  tenantId   String
+  attendance Attendance[]
+  leaves     Leave[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model Attendance {
+  id         String    @id @default(uuid())
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  employeeId String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+  tenantId   String
+  date       DateTime  @db.Date
+  checkIn    DateTime?
+  checkOut   DateTime?
+  status     String // PRESENT, ABSENT, LATE
+}
+
+model Leave {
+  id         String      @id @default(uuid())
+  employee   Employee    @relation(fields: [employeeId], references: [id])
+  employeeId String
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  tenantId   String
+  startDate  DateTime
+  endDate    DateTime
+  status     LeaveStatus @default(PENDING)
+  reason     String?
 }

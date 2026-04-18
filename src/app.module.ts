@@ -11,6 +11,9 @@ import { BillingModule } from './modules/billing/billing.module';
 import { ChannelModule } from './modules/channel/channel.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { PricingModule } from './modules/pricing/pricing.module';
+import { TenantModule } from './modules/tenant/tenant.module';
+import { NightAuditModule } from './modules/night-audit/night-audit.module';
+import { FnBModule } from './modules/fnb/fnb.module';
 
 @Module({
   imports: [
@@ -33,6 +36,9 @@ import { PricingModule } from './modules/pricing/pricing.module';
     BillingModule,
     ChannelModule,
     PricingModule,
+    TenantModule,
+    NightAuditModule,
+    FnBModule,
   ],
 })
 export class AppModule {}

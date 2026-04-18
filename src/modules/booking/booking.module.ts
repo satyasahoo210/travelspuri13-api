@@ -1,11 +1,12 @@
-import { Module } from '@nestjs/common';
-import { BookingService } from './booking.service';
-import { BookingController } from './booking.controller';
-import { InventoryModule } from '../inventory/inventory.module';
-import { PricingModule } from '../pricing/pricing.module';
+import { RedisModule } from '@/common/redis/redis.module'
+import { Module } from '@nestjs/common'
+import { InventoryModule } from '../inventory/inventory.module'
+import { PricingModule } from '../pricing/pricing.module'
+import { BookingController } from './booking.controller'
+import { BookingService } from './booking.service'
 
 @Module({
-  imports: [InventoryModule, PricingModule],
+  imports: [InventoryModule, PricingModule, RedisModule],
   controllers: [BookingController],
   providers: [BookingService],
 })

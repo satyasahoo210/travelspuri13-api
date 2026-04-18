@@ -18,8 +18,7 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@/*": ["./src/*"],
-      "@/generated/prisma/*": ["./prisma/generated/prisma/*"]
+      "@/*": ["./src/*"]
     }
   }
 }

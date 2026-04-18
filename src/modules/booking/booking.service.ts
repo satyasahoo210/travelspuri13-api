@@ -1,7 +1,11 @@
 import { PrismaService } from '@/common/prisma/prisma.service'
 import { RedisService } from '@/common/redis/redis.service'
 import { BookingStatus } from '@/generated/prisma/client'
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { InventoryService } from '../inventory/inventory.service'
 import { PricingService } from '../pricing/pricing.service'
 import { CreateBookingDto } from './dto/booking.dto'
@@ -15,19 +19,21 @@ export class BookingService {
     private pricingService: PricingService,
   ) {}
 
-  async createBooking(dto: CreateBookingDto) {
+  async createBooking(dto: CreateBookingDto, tenantId: string) {
     const { checkInDate, checkOutDate, rooms, guestId, propertyId, source } =
       dto
     const start = new Date(checkInDate)
     const end = new Date(checkOutDate)
 
-    const property = await this.prisma.property.findUnique({
-      where: { id: propertyId },
+    const property = await this.prisma.property.findFirst({
+      where: { id: propertyId, tenantId },
       select: { taxPercentage: true },
     })
 
     if (!property) {
-      throw new NotFoundException(`Property ${propertyId} not found`)
+      throw new NotFoundException(
+        `Property ${propertyId} not found for this tenant`,
+      )
     }
 
     // We only decrease inventory for dates up to checkOutDate - 1 day
@@ -38,9 +44,9 @@ export class BookingService {
       for (const roomItem of rooms) {
         for (const date of bookingDates) {
           const lockKey = `lock:inventory:${roomItem.roomTypeId}:${date.toISOString().split('T')[0]}`
-          const acquired = await this.redisService.acquireLock(lockKey)
+          const lockId = await this.redisService.acquireLock(lockKey, 30000) // 30s TTL
 
-          if (!acquired) {
+          if (!lockId) {
             throw new BadRequestException(
               'Room type is currently being booked by another user. Please try again.',
             )
@@ -54,7 +60,7 @@ export class BookingService {
               roomItem.quantity,
             )
           } finally {
-            await this.redisService.releaseLock(lockKey)
+            await this.redisService.releaseLock(lockKey, lockId)
           }
         }
       }
@@ -76,6 +82,7 @@ export class BookingService {
       // 3. Create Booking
       const booking = await tx.booking.create({
         data: {
+          tenantId,
           guestId,
           propertyId,
           source,
@@ -95,6 +102,7 @@ export class BookingService {
       // 4. Create Billing
       await tx.billing.create({
         data: {
+          tenantId,
           bookingId: booking.id,
           totalAmount: totalAmount,
           taxAmount: taxAmount,
@@ -106,10 +114,10 @@ export class BookingService {
     })
   }
 
-  async cancelBooking(bookingId: string) {
+  async cancelBooking(bookingId: string, tenantId: string) {
     return this.prisma.$transaction(async (tx) => {
-      const booking = await tx.booking.findUnique({
-        where: { id: bookingId },
+      const booking = await tx.booking.findFirst({
+        where: { id: bookingId, tenantId },
         include: { bookingRooms: true },
       })
 
@@ -140,6 +148,27 @@ export class BookingService {
         data: { status: BookingStatus.CANCELLED },
       })
     })
+  }
+
+  async syncBookings(since: number, tenantId: string) {
+    const sinceDate = new Date(since)
+
+    const bookings = await this.prisma.booking.findMany({
+      where: {
+        tenantId,
+        updatedAt: {
+          gt: sinceDate,
+        },
+      },
+      include: {
+        bookingRooms: true,
+      },
+    })
+
+    return {
+      data: bookings,
+      timestamp: Date.now(),
+    }
   }
 
   private getDatesInRange(startDate: Date, endDate: Date): Date[] {

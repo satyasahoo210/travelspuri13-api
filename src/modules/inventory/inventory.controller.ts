@@ -1,3 +1,4 @@
+import { TenantId } from '@/common/decorators/tenant-id.decorator'
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
 import { Controller, Get, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
@@ -16,11 +17,13 @@ export class InventoryController {
     @Query('roomTypeId') roomTypeId: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
+    @TenantId() tenantId: string,
   ) {
     return this.inventoryService.getAvailability(
       roomTypeId,
       new Date(startDate),
       new Date(endDate),
+      tenantId,
     )
   }
 }

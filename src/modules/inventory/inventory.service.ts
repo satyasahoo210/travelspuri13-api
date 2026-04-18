@@ -5,15 +5,16 @@ import { BadRequestException, Injectable } from '@nestjs/common'
 export class InventoryService {
   constructor(private prisma: PrismaService) {}
 
-  async getAvailability(roomTypeId: string, startDate: Date, endDate: Date) {
+  async getAvailability(roomTypeId: string, startDate: Date, endDate: Date, tenantId: string) {
     const days = this.getDatesInRange(startDate, endDate)
 
     // Ensure inventory records exist for the range
-    await this.ensureInventoryRecords(roomTypeId, days)
+    await this.ensureInventoryRecords(roomTypeId, days, tenantId)
 
     return this.prisma.inventory.findMany({
       where: {
         roomTypeId,
+        tenantId,
         date: {
           gte: startDate,
           lte: endDate,
@@ -69,7 +70,7 @@ export class InventoryService {
     })
   }
 
-  private async ensureInventoryRecords(roomTypeId: string, dates: Date[]) {
+  private async ensureInventoryRecords(roomTypeId: string, dates: Date[], tenantId: string) {
     const roomType = await this.prisma.roomType.findUnique({
       where: { id: roomTypeId },
       include: { _count: { select: { rooms: true } } },
@@ -90,6 +91,7 @@ export class InventoryService {
         update: {}, // Do nothing if exists
         create: {
           roomTypeId,
+          tenantId,
           date,
           totalRooms: roomCount,
           availableRooms: roomCount,

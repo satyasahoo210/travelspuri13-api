@@ -20,13 +20,21 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return this.client;
   }
 
-  async acquireLock(key: string, ttl: number = 5000): Promise<boolean> {
-    const lockValue = Date.now() + ttl;
-    const result = await this.client.set(key, lockValue, 'PX', ttl, 'NX');
-    return result === 'OK';
+  async acquireLock(key: string, ttl: number = 5000): Promise<string | null> {
+    const value = Math.random().toString(36).substring(2);
+    const result = await this.client.set(key, value, 'PX', ttl, 'NX');
+    return result === 'OK' ? value : null;
   }
 
-  async releaseLock(key: string): Promise<void> {
-    await this.client.del(key);
+  async releaseLock(key: string, value: string): Promise<boolean> {
+    const script = `
+      if redis.call("get", KEYS[1]) == ARGV[1] then
+        return redis.call("del", KEYS[1])
+      else
+        return 0
+      end
+    `;
+    const result = await this.client.eval(script, 1, key, value);
+    return result === 1;
   }
 }

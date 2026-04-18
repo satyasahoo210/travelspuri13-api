@@ -1,13 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '@/common/prisma/prisma.service'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { SetPriceDto } from './dto/pricing.dto'
 
 @Injectable()
 export class PricingService {
   constructor(private prisma: PrismaService) {}
 
-  async setPrice(dto: SetPriceDto) {
-    const { roomTypeId, date, basePrice, seasonalModifier } = dto
+  async setPrice(dto: SetPriceDto, tenantId: string) {
+    const { roomTypeId, date, basePrice, seasonalModifier = 1 } = dto
     return this.prisma.pricing.upsert({
       where: {
         roomTypeId_date: {
@@ -20,6 +20,7 @@ export class PricingService {
         seasonalModifier,
       },
       create: {
+        tenantId,
         roomTypeId,
         date: new Date(date),
         basePrice,
@@ -32,7 +33,12 @@ export class PricingService {
    * Calculates the total base price (excluding tax) for a stay.
    * Logic: For each night, use specific pricing if exists, else fallback to RoomType defaultPrice.
    */
-  async calculateStayPrice(roomTypeId: string, startDate: Date, endDate: Date, quantity: number): Promise<number> {
+  async calculateStayPrice(
+    roomTypeId: string,
+    startDate: Date,
+    endDate: Date,
+    quantity: number,
+  ): Promise<number> {
     const roomType = await this.prisma.roomType.findUnique({
       where: { id: roomTypeId },
       select: { defaultPrice: true },
@@ -55,14 +61,17 @@ export class PricingService {
       },
     })
 
-    const priceMap = new Map(specificPrices.map((p) => [p.date.toISOString().split('T')[0], p]))
+    const priceMap = new Map(
+      specificPrices.map((p) => [p.date.toISOString().split('T')[0], p]),
+    )
 
     for (const date of dates) {
       const dateKey = date.toISOString().split('T')[0]
       const specificPricing = priceMap.get(dateKey)
 
       if (specificPricing) {
-        total += Number(specificPricing.basePrice) * specificPricing.seasonalModifier
+        const seasonalModifier = specificPricing.seasonalModifier ?? 1
+        total += Number(specificPricing.basePrice) * seasonalModifier
       } else {
         total += Number(roomType.defaultPrice)
       }

@@ -33,7 +33,7 @@ export class AuthService {
       email: user.email,
       sub: user.id,
       role: user.role,
-      propertyId: user.propertyId,
+      tenantId: user.tenantId,
     }
 
     return {
@@ -42,7 +42,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
-        propertyId: user.propertyId,
+        tenantId: user.tenantId,
       },
     }
   }
