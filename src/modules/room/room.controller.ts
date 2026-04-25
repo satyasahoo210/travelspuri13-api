@@ -3,6 +3,7 @@ import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CreateRoomDto, CreateRoomTypeDto } from './dto/room.dto'
 import { RoomService } from './room.service'
+import { TenantId } from '@/common/decorators/tenant-id.decorator'
 
 @ApiTags('Rooms')
 @ApiBearerAuth()
@@ -27,5 +28,18 @@ export class RoomController {
   @ApiOperation({ summary: 'Get all room types for a property' })
   findRoomTypes(@Query('propertyId') propertyId: string) {
     return this.roomService.findRoomTypes(propertyId)
+  }
+
+  @Get('sync')
+  @ApiOperation({ summary: 'Sync rooms updated since timestamp' })
+  sync(@Query('since') since: string, @TenantId() tenantId: string) {
+    const lastSync = since ? parseInt(since, 10) : 0
+    return this.roomService.syncRooms(lastSync, tenantId)
+  }
+  @Get('room-types/sync')
+  @ApiOperation({ summary: 'Sync room types updated since timestamp' })
+  syncRoomTypes(@Query('since') since: string, @TenantId() tenantId: string) {
+    const lastSync = since ? parseInt(since, 10) : 0
+    return this.roomService.syncRoomTypes(lastSync, tenantId)
   }
 }

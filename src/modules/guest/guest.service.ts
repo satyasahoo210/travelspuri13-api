@@ -21,4 +21,21 @@ export class GuestService {
       where: { id },
     })
   }
+
+  async syncGuests(since: number, tenantId: string) {
+    const sinceDate = new Date(since)
+    const guests = await this.prisma.guest.findMany({
+      where: {
+        tenantId,
+        updatedAt: {
+          gt: sinceDate,
+        },
+      },
+    })
+
+    return {
+      data: guests,
+      timestamp: Date.now(),
+    }
+  }
 }

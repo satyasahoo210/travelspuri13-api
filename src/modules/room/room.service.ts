@@ -37,4 +37,49 @@ export class RoomService {
       include: { rooms: true },
     })
   }
+
+  async syncRooms(since: number, tenantId: string) {
+    const sinceDate = new Date(since)
+    const rooms = await this.prisma.room.findMany({
+      where: {
+        roomType: {
+          property: {
+            tenantId
+          }
+        },
+        updatedAt: {
+          gt: sinceDate,
+        },
+      },
+      include: {
+        roomType: true
+      }
+    })
+
+    return {
+      data: rooms,
+      timestamp: Date.now(),
+    }
+  }
+  async syncRoomTypes(since: number, tenantId: string) {
+    const sinceDate = new Date(since)
+    const roomTypes = await this.prisma.roomType.findMany({
+      where: {
+        property: {
+          tenantId
+        },
+        updatedAt: {
+          gt: sinceDate,
+        },
+      },
+      include: {
+        rooms: true
+      }
+    })
+
+    return {
+      data: roomTypes,
+      timestamp: Date.now(),
+    }
+  }
 }

@@ -17,4 +17,21 @@ export class BillingService {
       data: { paymentStatus: status },
     })
   }
+
+  async syncBillings(since: number, tenantId: string) {
+    const sinceDate = new Date(since)
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        tenantId,
+        updatedAt: {
+          gt: sinceDate,
+        },
+      },
+    })
+
+    return {
+      data: payments,
+      timestamp: Date.now(),
+    }
+  }
 }
