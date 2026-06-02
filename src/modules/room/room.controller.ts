@@ -1,5 +1,5 @@
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CreateRoomDto, CreateRoomTypeDto } from './dto/room.dto'
 import { RoomService } from './room.service'
@@ -36,10 +36,29 @@ export class RoomController {
     const lastSync = since ? parseInt(since, 10) : 0
     return this.roomService.syncRooms(lastSync, tenantId)
   }
+
   @Get('room-types/sync')
   @ApiOperation({ summary: 'Sync room types updated since timestamp' })
   syncRoomTypes(@Query('since') since: string, @TenantId() tenantId: string) {
     const lastSync = since ? parseInt(since, 10) : 0
     return this.roomService.syncRoomTypes(lastSync, tenantId)
+  }
+
+  @Patch('room-type/:id')
+  @ApiOperation({ summary: 'Update an existing room type' })
+  updateRoomType(@Param('id') id: string, @Body() updateRoomTypeDto: any) {
+    return this.roomService.updateRoomType(id, updateRoomTypeDto)
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update an existing room' })
+  updateRoom(@Param('id') id: string, @Body() updateRoomDto: any) {
+    return this.roomService.updateRoom(id, updateRoomDto)
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Update room housekeeping status' })
+  updateRoomStatus(@Param('id') id: string, @Body('status') status: any) {
+    return this.roomService.updateRoomStatus(id, status)
   }
 }

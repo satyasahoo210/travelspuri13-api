@@ -73,12 +73,12 @@ export class InventoryService {
   private async ensureInventoryRecords(roomTypeId: string, dates: Date[], tenantId: string) {
     const roomType = await this.prisma.roomType.findUnique({
       where: { id: roomTypeId },
-      include: { _count: { select: { rooms: true } } },
+      include: { _count: { select: { Room: true } } },
     })
 
     if (!roomType) throw new BadRequestException('Room type not found')
 
-    const roomCount = roomType._count.rooms
+    const roomCount = roomType._count.Room
 
     for (const date of dates) {
       await this.prisma.inventory.upsert({

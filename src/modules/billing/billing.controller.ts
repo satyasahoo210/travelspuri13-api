@@ -1,6 +1,5 @@
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
-import { PaymentStatus } from '@/generated/prisma/client'
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { BillingService } from './billing.service'
 import { TenantId } from '@/common/decorators/tenant-id.decorator'
@@ -22,7 +21,7 @@ export class BillingController {
   @ApiOperation({ summary: 'Update payment status' })
   updateStatus(
     @Param('bookingId') bookingId: string,
-    @Body('status') status: PaymentStatus,
+    @Body('status') status: any,
   ) {
     return this.billingService.updatePaymentStatus(bookingId, status)
   }
@@ -32,5 +31,17 @@ export class BillingController {
   sync(@Query('since') since: string, @TenantId() tenantId: string) {
     const lastSync = since ? parseInt(since, 10) : 0
     return this.billingService.syncBillings(lastSync, tenantId)
+  }
+
+  @Post('payment')
+  @ApiOperation({ summary: 'Record a new payment' })
+  createPayment(@Body() paymentData: any) {
+    return this.billingService.createPayment(paymentData)
+  }
+
+  @Patch('payment/:id')
+  @ApiOperation({ summary: 'Update an existing payment record' })
+  updatePayment(@Param('id') id: string, @Body() paymentData: any) {
+    return this.billingService.updatePayment(id, paymentData)
   }
 }

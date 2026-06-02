@@ -76,7 +76,7 @@ export class BookingService {
         )
       }
 
-      const taxAmount = (totalBaseAmount * property.taxPercentage) / 100
+      const taxAmount = (totalBaseAmount * (property.taxPercentage ?? 0)) / 100
       const totalAmount = totalBaseAmount + taxAmount
 
       // 3. Create Booking
@@ -89,14 +89,14 @@ export class BookingService {
           status: BookingStatus.CONFIRMED,
           checkInDate: start,
           checkOutDate: end,
-          bookingRooms: {
+          BookingRoom: {
             create: rooms.map((r) => ({
               roomTypeId: r.roomTypeId,
               quantity: r.quantity,
             })),
           },
         },
-        include: { bookingRooms: true },
+        include: { BookingRoom: true },
       })
 
       // 4. Create Billing
@@ -118,7 +118,7 @@ export class BookingService {
     return this.prisma.$transaction(async (tx) => {
       const booking = await tx.booking.findFirst({
         where: { id: bookingId, tenantId },
-        include: { bookingRooms: true },
+        include: { BookingRoom: true },
       })
 
       if (!booking || booking.status === BookingStatus.CANCELLED) {
@@ -131,7 +131,7 @@ export class BookingService {
       )
 
       // 1. Restore Inventory
-      for (const roomItem of booking.bookingRooms) {
+      for (const roomItem of booking.BookingRoom) {
         for (const date of bookingDates) {
           await this.inventoryService.incrementAvailability(
             tx,
@@ -161,7 +161,7 @@ export class BookingService {
         },
       },
       include: {
-        bookingRooms: true,
+        BookingRoom: true,
       },
     })
 
@@ -169,6 +169,15 @@ export class BookingService {
       data: bookings,
       timestamp: Date.now(),
     }
+  }
+
+  async updateBooking(bookingId: string, dto: any, tenantId: string) {
+    // Exclude relations from the raw database update data
+    const { bookingRooms, billing, services, payments, orders, ...updateData } = dto;
+    return this.prisma.booking.update({
+      where: { id: bookingId, tenantId },
+      data: updateData,
+    });
   }
 
   private getDatesInRange(startDate: Date, endDate: Date): Date[] {

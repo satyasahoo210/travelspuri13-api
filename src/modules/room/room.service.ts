@@ -34,7 +34,7 @@ export class RoomService {
   async findRoomTypes(propertyId: string) {
     return this.prisma.roomType.findMany({
       where: { propertyId },
-      include: { rooms: true },
+      include: { Room: true },
     })
   }
 
@@ -42,8 +42,8 @@ export class RoomService {
     const sinceDate = new Date(since)
     const rooms = await this.prisma.room.findMany({
       where: {
-        roomType: {
-          property: {
+        RoomType: {
+          Property: {
             tenantId
           }
         },
@@ -52,7 +52,7 @@ export class RoomService {
         },
       },
       include: {
-        roomType: true
+        RoomType: true
       }
     })
 
@@ -65,7 +65,7 @@ export class RoomService {
     const sinceDate = new Date(since)
     const roomTypes = await this.prisma.roomType.findMany({
       where: {
-        property: {
+        Property: {
           tenantId
         },
         updatedAt: {
@@ -73,7 +73,7 @@ export class RoomService {
         },
       },
       include: {
-        rooms: true
+        Room: true
       }
     })
 
@@ -81,5 +81,26 @@ export class RoomService {
       data: roomTypes,
       timestamp: Date.now(),
     }
+  }
+
+  async updateRoom(id: string, data: any) {
+    return this.prisma.room.update({
+      where: { id },
+      data,
+    })
+  }
+
+  async updateRoomStatus(id: string, status: any) {
+    return this.prisma.room.update({
+      where: { id },
+      data: { housekeepingStatus: status },
+    })
+  }
+
+  async updateRoomType(id: string, data: any) {
+    return this.prisma.roomType.update({
+      where: { id },
+      data,
+    })
   }
 }

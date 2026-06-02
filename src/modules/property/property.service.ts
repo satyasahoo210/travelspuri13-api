@@ -12,14 +12,16 @@ export class PropertyService {
     })
   }
 
-  async findAll() {
-    return this.prisma.property.findMany()
+  async findAll(tenantId: string) {
+    return this.prisma.property.findMany({
+      where: { tenantId },
+    })
   }
 
   async findOne(id: string) {
     return this.prisma.property.findUnique({
       where: { id },
-      include: { roomTypes: true },
+      include: { RoomType: true },
     })
   }
 }

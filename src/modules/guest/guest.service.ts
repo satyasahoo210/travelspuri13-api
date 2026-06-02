@@ -22,6 +22,13 @@ export class GuestService {
     })
   }
 
+  async update(id: string, updateGuestDto: any) {
+    return this.prisma.guest.update({
+      where: { id },
+      data: updateGuestDto,
+    })
+  }
+
   async syncGuests(since: number, tenantId: string) {
     const sinceDate = new Date(since)
     const guests = await this.prisma.guest.findMany({

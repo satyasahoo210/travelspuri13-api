@@ -34,4 +34,17 @@ export class BillingService {
       timestamp: Date.now(),
     }
   }
+
+  async createPayment(paymentData: any) {
+    return this.prisma.payment.create({
+      data: paymentData,
+    })
+  }
+
+  async updatePayment(id: string, paymentData: any) {
+    return this.prisma.payment.update({
+      where: { id },
+      data: paymentData,
+    })
+  }
 }

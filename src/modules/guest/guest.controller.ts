@@ -1,5 +1,5 @@
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CreateGuestDto } from './dto/create-guest.dto'
 import { GuestService } from './guest.service'
@@ -35,5 +35,11 @@ export class GuestController {
   @ApiOperation({ summary: 'Get guest by ID' })
   findOne(@Param('id') id: string) {
     return this.guestService.findOne(id)
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update an existing guest profile' })
+  update(@Param('id') id: string, @Body() updateGuestDto: any) {
+    return this.guestService.update(id, updateGuestDto)
   }
 }

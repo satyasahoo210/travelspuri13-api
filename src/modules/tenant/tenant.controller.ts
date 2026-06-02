@@ -3,9 +3,11 @@ import { Roles } from '@/common/guards/roles.decorator'
 import { RolesGuard } from '@/common/guards/roles.guard'
 import { UserRole } from '@/generated/prisma/client'
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
+import { ApiBearerAuth } from '@nestjs/swagger'
 import { CreateTenantDto } from './dto/create-tenant.dto'
 import { TenantService } from './tenant.service'
 
+@ApiBearerAuth()
 @Controller('tenant')
 export class TenantController {
   constructor(private readonly tenantService: TenantService) {}

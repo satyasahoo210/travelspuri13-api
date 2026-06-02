@@ -6,6 +6,7 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CreatePropertyDto } from './dto/create-property.dto'
 import { PropertyService } from './property.service'
+import { TenantId } from '@/common/decorators/tenant-id.decorator'
 
 @ApiTags('Property')
 @ApiBearerAuth()
@@ -23,8 +24,8 @@ export class PropertyController {
 
   @Get()
   @ApiOperation({ summary: 'Get all properties' })
-  findAll() {
-    return this.propertyService.findAll()
+  findAll(@TenantId() tenantId: string) {
+    return this.propertyService.findAll(tenantId)
   }
 
   @Get(':id')

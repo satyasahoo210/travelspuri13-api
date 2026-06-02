@@ -1,5 +1,7 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common'
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
+import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Request, UseGuards } from '@nestjs/common'
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
+import { Request as ExpessReq } from 'express'
 import { AuthService } from './auth.service'
 import { LoginDto } from './dto/login.dto'
 
@@ -15,5 +17,13 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto)
+  }
+
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  async getProfile(@Request() req: ExpessReq) {
+    return req.user
   }
 }

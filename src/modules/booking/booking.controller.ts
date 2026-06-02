@@ -1,5 +1,5 @@
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { BookingService } from './booking.service'
 import { CreateBookingDto } from './dto/booking.dto'
@@ -29,5 +29,11 @@ export class BookingController {
   async sync(@Query('since') since: string, @TenantId() tenantId: string) {
     const lastSync = since ? parseInt(since, 10) : 0
     return this.bookingService.syncBookings(lastSync, tenantId)
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update an existing booking' })
+  async update(@Param('id') id: string, @Body() updateBookingDto: any, @TenantId() tenantId: string) {
+    return this.bookingService.updateBooking(id, updateBookingDto, tenantId)
   }
 }

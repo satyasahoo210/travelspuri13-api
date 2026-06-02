@@ -12,7 +12,7 @@ export class CreatePropertyDto {
   @IsNotEmpty()
   address!: string
 
-  @ApiProperty({ example: 'America/New_York' })
+  @ApiProperty({ example: 'Asia/Kolkata' })
   @IsString()
   @IsNotEmpty()
   timezone!: string
