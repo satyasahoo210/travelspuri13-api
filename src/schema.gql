@@ -2,15 +2,34 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type NightAuditResponse {
-  success: Boolean!
-  timestamp: DateTime!
+type Tenant {
+  id: ID!
+  name: String!
+  email: String
+  featureFlags: String
+  createdAt: DateTime
+  updatedAt: DateTime
 }
 
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
+
+type TenantAdminUser {
+  email: String!
+  name: String
+}
+
+type CreateTenantResponse {
+  tenant: Tenant!
+  adminUser: TenantAdminUser!
+}
+
+type NightAuditResponse {
+  success: Boolean!
+  timestamp: DateTime!
+}
 
 type RoomType {
   id: ID!
@@ -60,10 +79,31 @@ type SyncRoomTypesResponse {
   timestamp: Float!
 }
 
+type User {
+  id: ID!
+  email: String!
+  name: String
+  role: UserRole!
+  tenantId: String!
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  PROPERTY_MANAGER
+  STAFF
+}
+
 type Query {
   roomTypes(propertyId: String!): [RoomType!]!
   syncRooms(since: String): SyncRoomsResponse!
   syncRoomTypes(since: String): SyncRoomTypesResponse!
+  tenants: [Tenant!]!
+  tenant(id: ID!): Tenant
+  users: [User!]!
+  user(id: ID!): User!
 }
 
 type Mutation {
@@ -72,7 +112,10 @@ type Mutation {
   updateRoomType(id: ID!, input: UpdateRoomTypeInput!): RoomType!
   updateRoom(id: ID!, input: UpdateRoomInput!): Room!
   updateRoomStatus(id: ID!, status: HousekeepingStatus!): Room!
+  createTenant(input: CreateTenantInput!): CreateTenantResponse!
   runNightAudit(propertyId: String!): NightAuditResponse!
+  createUser(input: CreateUserInput!): User!
+  removeUser(id: ID!): User!
 }
 
 input CreateRoomTypeInput {
@@ -96,4 +139,21 @@ input UpdateRoomTypeInput {
 input UpdateRoomInput {
   roomNumber: String
   roomTypeId: String
+}
+
+input CreateTenantInput {
+  name: String!
+  email: String
+  featureFlags: String
+  adminEmail: String!
+  adminPassword: String!
+  adminName: String
+}
+
+input CreateUserInput {
+  email: String!
+  password: String!
+  name: String!
+  role: UserRole! = STAFF
+  tenantId: String
 }
