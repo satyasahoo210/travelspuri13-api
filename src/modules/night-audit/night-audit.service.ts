@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class NightAuditService {
@@ -19,13 +19,13 @@ export class NightAuditService {
       // 3. Generate daily financial summary (Stock/Revenue)
       
       // 4. Update room statuses
-      await tx.room.updateMany({
-        where: {
-          roomType: { propertyId },
-          status: 'OCCUPIED',
-        },
-        data: { status: 'DIRTY' },
-      });
+      // await tx.room.updateMany({
+      //   where: {
+      //     RoomType: { propertyId },
+      //     status: 'OCCUPIED',
+      //   },
+      //   data: { status: 'DIRTY' },
+      // });
 
       this.logger.log(`Night Audit completed for Property: ${propertyId}`);
       return { success: true, timestamp: new Date() };

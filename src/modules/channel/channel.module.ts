@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
-import { ChannelService } from './channel.service';
+import { Module } from '@nestjs/common';
 import { ChannelProcessor } from './channel.processor';
+import { ChannelService } from './channel.service';
 
 @Module({
   imports: [

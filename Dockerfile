@@ -1,5 +1,5 @@
-# Base image
-FROM node:22-alpine
+FROM node:22-alpine AS builder
+ARG DATABASE_URL
 
 # Create app directory
 WORKDIR /app
@@ -14,13 +14,28 @@ RUN yarn install --frozen-lockfile
 COPY . .
 
 # Generate Prisma client
+ENV DATABASE_URL=$DATABASE_URL
 RUN npx prisma generate
 
 # Build the application
 RUN yarn build
 
-# Expose port
-EXPOSE 3000
+# ==========================================================
 
-# Start the application
-CMD ["yarn", "start:prod"]
+FROM node:22-alpine
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=9000
+
+COPY package.json yarn.lock ./
+
+RUN yarn install --frozen-lockfile
+
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 9000
+
+CMD ["node", "dist/main.js"]
+

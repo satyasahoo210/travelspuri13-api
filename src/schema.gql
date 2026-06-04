@@ -1,0 +1,99 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type NightAuditResponse {
+  success: Boolean!
+  timestamp: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type RoomType {
+  id: ID!
+  name: String!
+  capacity: Int!
+  defaultPrice: Float
+  propertyId: String!
+  photos: [String!]!
+  Room: [Room]
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type Room {
+  id: ID!
+  roomNumber: String!
+  status: RoomStatus!
+  roomTypeId: String!
+  housekeepingStatus: HousekeepingStatus!
+  priorityCleaning: Boolean!
+  RoomType: RoomType
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+enum RoomStatus {
+  AVAILABLE
+  MAINTENANCE
+  OCCUPIED
+  DIRTY
+}
+
+enum HousekeepingStatus {
+  READY
+  DIRTY
+  CLEANING
+  INSPECTING
+}
+
+type SyncRoomsResponse {
+  data: [Room!]!
+  timestamp: Float!
+}
+
+type SyncRoomTypesResponse {
+  data: [RoomType!]!
+  timestamp: Float!
+}
+
+type Query {
+  roomTypes(propertyId: String!): [RoomType!]!
+  syncRooms(since: String): SyncRoomsResponse!
+  syncRoomTypes(since: String): SyncRoomTypesResponse!
+}
+
+type Mutation {
+  createRoomType(input: CreateRoomTypeInput!): RoomType!
+  createRoom(input: CreateRoomInput!): Room!
+  updateRoomType(id: ID!, input: UpdateRoomTypeInput!): RoomType!
+  updateRoom(id: ID!, input: UpdateRoomInput!): Room!
+  updateRoomStatus(id: ID!, status: HousekeepingStatus!): Room!
+  runNightAudit(propertyId: String!): NightAuditResponse!
+}
+
+input CreateRoomTypeInput {
+  name: String!
+  capacity: Int!
+  defaultPrice: Float!
+  propertyId: String!
+}
+
+input CreateRoomInput {
+  roomNumber: String!
+  roomTypeId: String!
+}
+
+input UpdateRoomTypeInput {
+  name: String
+  capacity: Int
+  defaultPrice: Float
+}
+
+input UpdateRoomInput {
+  roomNumber: String
+  roomTypeId: String
+}
