@@ -1,8 +1,8 @@
+import { TenantId } from '@/common/decorators/tenant-id.decorator'
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { BillingService } from './billing.service'
-import { TenantId } from '@/common/decorators/tenant-id.decorator'
 
 @ApiTags('Billing')
 @ApiBearerAuth()
@@ -28,9 +28,9 @@ export class BillingController {
 
   @Get('sync')
   @ApiOperation({ summary: 'Sync billings/payments updated since timestamp' })
-  sync(@Query('since') since: string, @TenantId() tenantId: string) {
+  sync(@Query('since') since: string, @Query('propertyId') propertyId: string, @TenantId() tenantId: string) {
     const lastSync = since ? parseInt(since, 10) : 0
-    return this.billingService.syncBillings(lastSync, tenantId)
+    return this.billingService.syncBillings(lastSync, propertyId, tenantId)
   }
 
   @Post('payment')

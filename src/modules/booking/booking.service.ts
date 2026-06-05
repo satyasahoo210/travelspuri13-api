@@ -150,12 +150,13 @@ export class BookingService {
     })
   }
 
-  async syncBookings(since: number, tenantId: string) {
+  async syncBookings(since: number, propertyId: string, tenantId: string) {
     const sinceDate = new Date(since)
 
     const bookings = await this.prisma.booking.findMany({
       where: {
         tenantId,
+        propertyId,
         updatedAt: {
           gt: sinceDate,
         },

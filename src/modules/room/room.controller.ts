@@ -1,9 +1,9 @@
+import { TenantId } from '@/common/decorators/tenant-id.decorator'
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CreateRoomDto, CreateRoomTypeDto } from './dto/room.dto'
 import { RoomService } from './room.service'
-import { TenantId } from '@/common/decorators/tenant-id.decorator'
 
 @ApiTags('Rooms')
 @ApiBearerAuth()
@@ -32,16 +32,16 @@ export class RoomController {
 
   @Get('sync')
   @ApiOperation({ summary: 'Sync rooms updated since timestamp' })
-  sync(@Query('since') since: string, @TenantId() tenantId: string) {
+  sync(@Query('since') since: string, @Query('propertyId') propertyId: string, @TenantId() tenantId: string) {
     const lastSync = since ? parseInt(since, 10) : 0
-    return this.roomService.syncRooms(lastSync, tenantId)
+    return this.roomService.syncRooms(lastSync, propertyId, tenantId)
   }
 
   @Get('room-types/sync')
   @ApiOperation({ summary: 'Sync room types updated since timestamp' })
-  syncRoomTypes(@Query('since') since: string, @TenantId() tenantId: string) {
+  syncRoomTypes(@Query('since') since: string, @Query('propertyId') propertyId: string, @TenantId() tenantId: string) {
     const lastSync = since ? parseInt(since, 10) : 0
-    return this.roomService.syncRoomTypes(lastSync, tenantId)
+    return this.roomService.syncRoomTypes(lastSync, propertyId, tenantId)
   }
 
   @Patch('room-type/:id')

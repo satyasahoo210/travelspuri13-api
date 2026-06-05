@@ -38,14 +38,15 @@ export class RoomService {
     })
   }
 
-  async syncRooms(since: number, tenantId: string) {
+  async syncRooms(since: number, propertyId: string, tenantId: string) {
     const sinceDate = new Date(since)
     const rooms = await this.prisma.room.findMany({
       where: {
         RoomType: {
+          propertyId,
           Property: {
-            tenantId
-          }
+            tenantId,
+          },
         },
         updatedAt: {
           gt: sinceDate,
@@ -61,12 +62,13 @@ export class RoomService {
       timestamp: Date.now(),
     }
   }
-  async syncRoomTypes(since: number, tenantId: string) {
+  async syncRoomTypes(since: number, propertyId: string, tenantId: string) {
     const sinceDate = new Date(since)
     const roomTypes = await this.prisma.roomType.findMany({
       where: {
+        propertyId,
         Property: {
-          tenantId
+          tenantId,
         },
         updatedAt: {
           gt: sinceDate,

@@ -1,11 +1,11 @@
-import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
-import { RoomService } from './room.service';
-import { Room, RoomType, SyncRoomsResponse, SyncRoomTypesResponse } from './dto/room.type';
-import { CreateRoomInput, CreateRoomTypeInput, UpdateRoomInput, UpdateRoomTypeInput } from './dto/room-input.type';
+import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { HousekeepingStatus } from '@/generated/prisma/client';
+import { UseGuards } from '@nestjs/common';
+import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { CreateRoomInput, CreateRoomTypeInput, UpdateRoomInput, UpdateRoomTypeInput } from './dto/room-input.type';
+import { Room, RoomType, SyncRoomsResponse, SyncRoomTypesResponse } from './dto/room.type';
+import { RoomService } from './room.service';
 
 @Resolver()
 @UseGuards(JwtAuthGuard)
@@ -37,21 +37,23 @@ export class RoomResolver {
 
   @Query(() => SyncRoomsResponse)
   async syncRooms(
+    @TenantId() tenantId: string,
+    @Args('propertyId') propertyId: string,
     @Args('since', { nullable: true }) since?: string,
-    @TenantId() tenantId?: string,
   ): Promise<SyncRoomsResponse> {
     const lastSync = since ? parseInt(since, 10) : 0;
-    const result = await this.roomService.syncRooms(lastSync, tenantId || '');
+    const result = await this.roomService.syncRooms(lastSync, propertyId, tenantId);
     return result as any;
   }
 
   @Query(() => SyncRoomTypesResponse)
   async syncRoomTypes(
+    @TenantId() tenantId: string,
+    @Args('propertyId') propertyId: string,
     @Args('since', { nullable: true }) since?: string,
-    @TenantId() tenantId?: string,
   ): Promise<SyncRoomTypesResponse> {
     const lastSync = since ? parseInt(since, 10) : 0;
-    const result = await this.roomService.syncRoomTypes(lastSync, tenantId || '');
+    const result = await this.roomService.syncRoomTypes(lastSync, propertyId, tenantId);
     return result as any;
   }
 

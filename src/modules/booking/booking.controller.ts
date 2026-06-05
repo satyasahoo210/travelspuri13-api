@@ -1,9 +1,9 @@
+import { TenantId } from '@/common/decorators/tenant-id.decorator'
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { BookingService } from './booking.service'
 import { CreateBookingDto } from './dto/booking.dto'
-import { TenantId } from '@/common/decorators/tenant-id.decorator'
 
 @ApiTags('Booking')
 @ApiBearerAuth()
@@ -26,9 +26,9 @@ export class BookingController {
  
   @Get('sync')
   @ApiOperation({ summary: 'Sync bookings since a certain timestamp' })
-  async sync(@Query('since') since: string, @TenantId() tenantId: string) {
+  async sync(@Query('since') since: string, @Query('propertyId') propertyId: string, @TenantId() tenantId: string) {
     const lastSync = since ? parseInt(since, 10) : 0
-    return this.bookingService.syncBookings(lastSync, tenantId)
+    return this.bookingService.syncBookings(lastSync, propertyId, tenantId)
   }
 
   @Patch(':id')

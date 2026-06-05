@@ -12,7 +12,10 @@ export class GuestService {
     })
   }
 
-  async findAll() {
+  async findAll(tenantId?: string) {
+    if(tenantId){
+      return this.prisma.guest.findMany({ where: { tenantId } })
+    }
     return this.prisma.guest.findMany()
   }
 
