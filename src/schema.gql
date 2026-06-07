@@ -307,7 +307,7 @@ type DevDropdownsResponse {
 
 type Query {
   properties: [Property!]!
-  property(id: ID!): Property
+  property(id: String!): Property
   roomTypes(propertyId: String!): [RoomType!]!
   syncRooms(propertyId: String!, since: String): SyncRoomsResponse!
   syncRoomTypes(propertyId: String!, since: String): SyncRoomTypesResponse!

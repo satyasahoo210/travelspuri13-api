@@ -1,13 +1,13 @@
-import { Resolver, Query, Mutation, Args, ID, ResolveField, Parent } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
-import { RolesGuard } from '@/common/guards/roles.guard';
-import { Roles } from '@/common/guards/roles.decorator';
-import { UserRole } from '@/generated/prisma/client';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
-import { PropertyService } from './property.service';
-import { Property } from './dto/property.type';
+import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
+import { Roles } from '@/common/guards/roles.decorator';
+import { RolesGuard } from '@/common/guards/roles.guard';
+import { UserRole } from '@/generated/prisma/client';
+import { UseGuards } from '@nestjs/common';
+import { Args, ID, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { CreatePropertyInput, UpdatePropertyInput } from './dto/property-input.type';
+import { Property } from './dto/property.type';
+import { PropertyService } from './property.service';
 
 @Resolver(() => Property)
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -60,7 +60,7 @@ export class PropertyResolver {
 
   @Query(() => Property, { nullable: true })
   async property(
-    @Args('id', { type: () => ID }) id: string,
+    @Args('id', { type: () => String }) id: string,
   ): Promise<Property | null> {
     const property = await this.propertyService.findOne(id);
     if (!property) return null;

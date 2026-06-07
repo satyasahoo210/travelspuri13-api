@@ -57,6 +57,13 @@ export class BookingService {
     return this.prisma.$transaction(async (tx) => {
       // 1. Inventory Management
       for (const roomItem of rooms) {
+        await this.inventoryService.ensureInventoryRecords(
+          roomItem.roomTypeId,
+          bookingDates,
+          tenantId,
+          tx,
+        )
+
         for (const date of bookingDates) {
           const lockKey = `lock:inventory:${roomItem.roomTypeId}:${date.toISOString().split('T')[0]}`
           const lockId = await this.redisService.acquireLock(lockKey, 30000) // 30s TTL
@@ -299,8 +306,13 @@ export class BookingService {
     return this.prisma.booking.findMany({
       where: { propertyId, tenantId },
       include: {
-        BookingRoom: true,
+        BookingRoom: {
+          include: {
+            Room: true,
+          },
+        },
         Guest: true,
+        Payment: true,
       },
       orderBy: {
         createdAt: 'desc',

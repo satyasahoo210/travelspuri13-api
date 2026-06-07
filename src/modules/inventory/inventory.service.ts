@@ -70,8 +70,9 @@ export class InventoryService {
     })
   }
 
-  private async ensureInventoryRecords(roomTypeId: string, dates: Date[], tenantId: string) {
-    const roomType = await this.prisma.roomType.findUnique({
+  async ensureInventoryRecords(roomTypeId: string, dates: Date[], tenantId: string, tx?: any) {
+    const client = tx || this.prisma
+    const roomType = await client.roomType.findUnique({
       where: { id: roomTypeId },
       include: { _count: { select: { Room: true } } },
     })
@@ -81,7 +82,7 @@ export class InventoryService {
     const roomCount = roomType._count.Room
 
     for (const date of dates) {
-      await this.prisma.inventory.upsert({
+      await client.inventory.upsert({
         where: {
           roomTypeId_date: {
             roomTypeId,

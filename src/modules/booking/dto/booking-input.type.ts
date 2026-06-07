@@ -1,5 +1,6 @@
 import { InputType, Field, Int, Float } from '@nestjs/graphql';
 import { IsArray, IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { BookingSource, BookingStatus } from '@/generated/prisma/client';
 
 @InputType()
@@ -51,6 +52,7 @@ export class CreateBookingInput {
   @Field(() => [BookingRoomInput])
   @IsArray()
   @ValidateNested({ each: true })
+  @Type(() => BookingRoomInput)
   rooms!: BookingRoomInput[];
 
   @Field(() => Int, { nullable: true })

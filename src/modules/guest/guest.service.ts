@@ -7,6 +7,26 @@ export class GuestService {
   constructor(private prisma: PrismaService) {}
 
   async create(createGuestDto: CreateGuestDto) {
+    const conditions: any[] = []
+    if (createGuestDto.phone) {
+      conditions.push({ phone: createGuestDto.phone })
+    }
+    if (createGuestDto.idProofNumber) {
+      conditions.push({ idProofNumber: createGuestDto.idProofNumber })
+    }
+
+    if (conditions.length > 0) {
+      const existing = await this.prisma.guest.findFirst({
+        where: {
+          tenantId: createGuestDto.tenantId,
+          OR: conditions,
+        },
+      })
+      if (existing) {
+        return existing
+      }
+    }
+
     return this.prisma.guest.create({
       data: createGuestDto,
     })
