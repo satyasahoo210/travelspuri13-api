@@ -1,6 +1,6 @@
 import { InputType, Field, Int, Float } from '@nestjs/graphql';
 import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
-import { HousekeepingStatus } from '@/generated/prisma/client';
+import { HousekeepingStatus, RoomStatus } from '@/generated/prisma/client';
 
 @InputType()
 export class CreateRoomTypeInput {
@@ -69,4 +69,17 @@ export class UpdateRoomInput {
   @IsString()
   @IsOptional()
   roomTypeId?: string;
+
+  @Field(() => RoomStatus, { nullable: true })
+  @IsOptional()
+  status?: RoomStatus;
+
+  @Field(() => HousekeepingStatus, { nullable: true })
+  @IsOptional()
+  housekeepingStatus?: HousekeepingStatus;
+
+  @Field(() => Boolean, { nullable: true })
+  @IsOptional()
+  priorityCleaning?: boolean;
 }
+

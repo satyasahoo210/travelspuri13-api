@@ -1,5 +1,6 @@
 import { Field, ID, Float, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { PaymentStatus } from '@/generated/prisma/client';
+import { Booking } from '../../booking/dto/booking.type';
 
 registerEnumType(PaymentStatus, { name: 'PaymentStatus' });
 
@@ -61,6 +62,9 @@ export class Payment {
 
   @Field(() => String, { nullable: true })
   notes?: string | null;
+
+  @Field(() => Booking, { nullable: true })
+  Booking?: Booking;
 }
 
 @ObjectType()

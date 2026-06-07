@@ -40,6 +40,14 @@ export class BillingResolver {
     return result as any;
   }
 
+  @Query(() => [Payment])
+  async payments(
+    @TenantId() tenantId: string,
+  ): Promise<Payment[]> {
+    const payments = await this.billingService.findPaymentsByTenant(tenantId);
+    return payments as any;
+  }
+
   @Mutation(() => Payment)
   async createPayment(
     @Args('input') input: CreatePaymentInput,

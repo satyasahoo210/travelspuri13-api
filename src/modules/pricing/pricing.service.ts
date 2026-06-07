@@ -90,4 +90,34 @@ export class PricingService {
     }
     return dates
   }
+
+  async findRateOverrides(tenantId: string) {
+    return this.prisma.rateOverride.findMany({
+      where: { tenantId },
+      include: {
+        RoomType: true,
+      },
+    })
+  }
+
+  async createRateOverride(tenantId: string, input: any) {
+    return this.prisma.rateOverride.create({
+      data: {
+        roomTypeId: input.roomTypeId,
+        tenantId,
+        startDate: new Date(input.startDate),
+        endDate: new Date(input.endDate),
+        rate: input.rate,
+      },
+      include: {
+        RoomType: true,
+      },
+    })
+  }
+
+  async deleteRateOverride(id: string, tenantId: string) {
+    return this.prisma.rateOverride.delete({
+      where: { id },
+    })
+  }
 }

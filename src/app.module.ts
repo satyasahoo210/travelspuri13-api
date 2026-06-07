@@ -23,6 +23,9 @@ import { RoomModule } from './modules/room/room.module';
 import { SupabaseProxyModule } from './modules/supabase-proxy/supabase-proxy.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { UserModule } from './modules/user/user.module';
+import { ExpenseModule } from './modules/expense/expense.module';
+import { MessageModule } from './modules/message/message.module';
+import { DevDbModule } from './modules/dev-db/dev-db.module';
 
 @Module({
   imports: [
@@ -60,6 +63,9 @@ import { UserModule } from './modules/user/user.module';
     NightAuditModule,
     FnBModule,
     UserModule,
+    ExpenseModule,
+    MessageModule,
+    DevDbModule,
   ],
   controllers: [HealthController]
 })

@@ -1,4 +1,4 @@
-import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, ID, ResolveField, Parent } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
@@ -7,12 +7,20 @@ import { UserRole } from '@/generated/prisma/client';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { PropertyService } from './property.service';
 import { Property } from './dto/property.type';
-import { CreatePropertyInput } from './dto/property-input.type';
+import { CreatePropertyInput, UpdatePropertyInput } from './dto/property-input.type';
 
-@Resolver()
+@Resolver(() => Property)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PropertyResolver {
   constructor(private readonly propertyService: PropertyService) {}
+
+  @ResolveField(() => String, { nullable: true })
+  settings(@Parent() property: any): string | null {
+    if (!property.settings) return null;
+    return typeof property.settings === 'object'
+      ? JSON.stringify(property.settings)
+      : property.settings;
+  }
 
   @Mutation(() => Property)
   @Roles(UserRole.SUPER_ADMIN)
@@ -25,10 +33,21 @@ export class PropertyResolver {
       settings,
     });
 
-    return {
-      ...property,
-      settings: property.settings ? JSON.stringify(property.settings) : null,
-    } as any;
+    return property as any;
+  }
+
+  @Mutation(() => Property)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.TENANT_ADMIN)
+  async updateProperty(
+    @Args('id', { type: () => ID }) id: string,
+    @Args('input') input: UpdatePropertyInput,
+  ): Promise<Property> {
+    const settings = input.settings ? JSON.parse(input.settings) : undefined;
+    const property = await this.propertyService.update(id, {
+      ...input,
+      ...(settings !== undefined && { settings }),
+    });
+    return property as any;
   }
 
   @Query(() => [Property])
@@ -36,10 +55,7 @@ export class PropertyResolver {
     @TenantId() tenantId: string,
   ): Promise<Property[]> {
     const properties = await this.propertyService.findAll(tenantId);
-    return properties.map(p => ({
-      ...p,
-      settings: p.settings ? JSON.stringify(p.settings) : null,
-    })) as any;
+    return properties as any;
   }
 
   @Query(() => Property, { nullable: true })
@@ -48,9 +64,6 @@ export class PropertyResolver {
   ): Promise<Property | null> {
     const property = await this.propertyService.findOne(id);
     if (!property) return null;
-    return {
-      ...property,
-      settings: property.settings ? JSON.stringify(property.settings) : null,
-    } as any;
+    return property as any;
   }
 }

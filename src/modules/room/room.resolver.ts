@@ -74,6 +74,14 @@ export class RoomResolver {
     return room as any;
   }
 
+  @Query(() => [Room])
+  async rooms(
+    @Args('propertyId') propertyId: string,
+  ): Promise<Room[]> {
+    const rooms = await this.roomService.findRooms(propertyId);
+    return rooms as any;
+  }
+
   @Mutation(() => Room)
   async updateRoomStatus(
     @Args('id', { type: () => ID }) id: string,

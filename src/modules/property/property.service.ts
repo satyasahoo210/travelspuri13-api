@@ -24,4 +24,11 @@ export class PropertyService {
       include: { RoomType: true },
     })
   }
+
+  async update(id: string, data: any) {
+    return this.prisma.property.update({
+      where: { id },
+      data,
+    })
+  }
 }

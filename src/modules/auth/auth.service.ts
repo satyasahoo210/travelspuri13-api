@@ -46,6 +46,41 @@ export class AuthService {
 
     return {
       access_token: authData.session.access_token,
+      refresh_token: authData.session.refresh_token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId,
+      },
+    };
+  }
+
+  async refresh(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token is required');
+    }
+
+    const { data, error } = await this.supabase.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+
+    if (error || !data.session) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: data.user?.id },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User profile not found in PMS database');
+    }
+
+    return {
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
       user: {
         id: user.id,
         email: user.email,

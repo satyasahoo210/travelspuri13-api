@@ -13,6 +13,15 @@ export class BookingRoomInput {
   @IsInt()
   @Min(1)
   quantity!: number;
+
+  @Field({ nullable: true })
+  @IsString()
+  @IsOptional()
+  roomId?: string;
+
+  @Field(() => Float, { nullable: true })
+  @IsOptional()
+  priceOverride?: number;
 }
 
 @InputType()
@@ -43,6 +52,34 @@ export class CreateBookingInput {
   @IsArray()
   @ValidateNested({ each: true })
   rooms!: BookingRoomInput[];
+
+  @Field(() => Int, { nullable: true })
+  @IsInt()
+  @IsOptional()
+  adults?: number;
+
+  @Field(() => Int, { nullable: true })
+  @IsInt()
+  @IsOptional()
+  children?: number;
+
+  @Field({ nullable: true })
+  @IsString()
+  @IsOptional()
+  notes?: string;
+
+  @Field(() => Boolean, { nullable: true })
+  @IsOptional()
+  waiveLastDayCharge?: boolean;
+
+  @Field(() => Float, { nullable: true })
+  @IsOptional()
+  advanceAmount?: number;
+
+  @Field({ nullable: true })
+  @IsString()
+  @IsOptional()
+  advanceMethod?: string;
 }
 
 @InputType()
@@ -96,4 +133,46 @@ export class UpdateBookingInput {
   @Field({ nullable: true })
   @IsOptional()
   actualCheckOut?: string;
+
+  @Field(() => Float, { nullable: true })
+  @IsOptional()
+  totalAmount?: number;
+}
+
+@InputType()
+export class UpdateBookingRoomInput {
+  @Field({ nullable: true })
+  @IsString()
+  @IsOptional()
+  roomId?: string;
+
+  @Field({ nullable: true })
+  @IsString()
+  @IsOptional()
+  roomTypeId?: string;
+
+  @Field(() => Float, { nullable: true })
+  @IsOptional()
+  priceOverride?: number;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  checkInDate?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  checkOutDate?: string;
+}
+
+@InputType()
+export class UpdateBookingServiceInput {
+  @Field(() => Int, { nullable: true })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  quantity?: number;
+
+  @Field(() => Float, { nullable: true })
+  @IsOptional()
+  totalPrice?: number;
 }

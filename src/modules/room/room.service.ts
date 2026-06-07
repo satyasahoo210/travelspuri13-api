@@ -85,6 +85,19 @@ export class RoomService {
     }
   }
 
+  async findRooms(propertyId: string) {
+    return this.prisma.room.findMany({
+      where: {
+        RoomType: {
+          propertyId,
+        },
+      },
+      include: {
+        RoomType: true,
+      },
+    })
+  }
+
   async updateRoom(id: string, data: any) {
     return this.prisma.room.update({
       where: { id },

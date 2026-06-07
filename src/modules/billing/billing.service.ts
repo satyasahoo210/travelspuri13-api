@@ -50,4 +50,20 @@ export class BillingService {
       data: paymentData,
     })
   }
+
+  async findPaymentsByTenant(tenantId: string) {
+    return this.prisma.payment.findMany({
+      where: { tenantId },
+      include: {
+        Booking: {
+          include: {
+            Guest: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+  }
 }

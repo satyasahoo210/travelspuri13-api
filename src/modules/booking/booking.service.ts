@@ -20,8 +20,20 @@ export class BookingService {
   ) {}
 
   async createBooking(dto: CreateBookingDto, tenantId: string) {
-    const { checkInDate, checkOutDate, rooms, guestId, propertyId, source } =
-      dto
+    const {
+      checkInDate,
+      checkOutDate,
+      rooms,
+      guestId,
+      propertyId,
+      source,
+      adults,
+      children,
+      notes,
+      waiveLastDayCharge,
+      advanceAmount,
+      advanceMethod,
+    } = dto
     const start = new Date(checkInDate)
     const end = new Date(checkOutDate)
 
@@ -38,6 +50,9 @@ export class BookingService {
 
     // We only decrease inventory for dates up to checkOutDate - 1 day
     const bookingDates = this.getDatesInRange(start, this.addDays(end, -1))
+    const diffTime = Math.abs(end.getTime() - start.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const nights = Math.max(1, diffDays)
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Inventory Management
@@ -68,12 +83,22 @@ export class BookingService {
       // 2. Price Calculation
       let totalBaseAmount = 0
       for (const roomItem of rooms) {
-        totalBaseAmount += await this.pricingService.calculateStayPrice(
-          roomItem.roomTypeId,
-          start,
-          end,
-          roomItem.quantity,
-        )
+        if (roomItem.priceOverride !== undefined && roomItem.priceOverride !== null) {
+          const calcNights = waiveLastDayCharge ? Math.max(1, nights - 1) : nights
+          totalBaseAmount += Number(roomItem.priceOverride) * calcNights * roomItem.quantity
+        } else {
+          let basePrice = await this.pricingService.calculateStayPrice(
+            roomItem.roomTypeId,
+            start,
+            end,
+            roomItem.quantity,
+          )
+          if (waiveLastDayCharge && nights > 1) {
+            const oneNightPrice = basePrice / nights
+            basePrice = basePrice - oneNightPrice
+          }
+          totalBaseAmount += basePrice
+        }
       }
 
       const taxAmount = (totalBaseAmount * (property.taxPercentage ?? 0)) / 100
@@ -89,24 +114,49 @@ export class BookingService {
           status: BookingStatus.CONFIRMED,
           checkInDate: start,
           checkOutDate: end,
+          adults: adults ?? 1,
+          children: children ?? 0,
+          notes: notes ?? null,
+          waiveLastDayCharge: waiveLastDayCharge ?? false,
+          totalAmount: totalAmount,
           BookingRoom: {
             create: rooms.map((r) => ({
               roomTypeId: r.roomTypeId,
               quantity: r.quantity,
+              roomId: r.roomId ?? null,
+              priceOverride: r.priceOverride ?? null,
+              status: BookingStatus.CONFIRMED,
+              checkInDate: start,
+              checkOutDate: end,
             })),
           },
         },
         include: { BookingRoom: true },
       })
 
-      // 4. Create Billing
+      // 4. Create Advance Payment (Optional)
+      if (advanceAmount && advanceAmount > 0) {
+        await tx.payment.create({
+          data: {
+            bookingId: booking.id,
+            tenantId,
+            amount: advanceAmount,
+            method: advanceMethod || 'CASH',
+            status: totalAmount <= advanceAmount ? 'PAID' : 'PARTIAL',
+            notes: 'Advance Booking Payment',
+          },
+        })
+      }
+
+      // 5. Create Billing
+      const paymentStatus = (advanceAmount && advanceAmount >= totalAmount) ? 'PAID' : (advanceAmount && advanceAmount > 0) ? 'PARTIAL' : 'PENDING'
       await tx.billing.create({
         data: {
           tenantId,
           bookingId: booking.id,
           totalAmount: totalAmount,
           taxAmount: taxAmount,
-          paymentStatus: 'PENDING',
+          paymentStatus: paymentStatus as any,
         },
       })
 
@@ -162,7 +212,24 @@ export class BookingService {
         },
       },
       include: {
-        BookingRoom: true,
+        BookingRoom: {
+          include: {
+            Room: {
+              include: {
+                RoomType: true,
+              }
+            },
+            RoomType: true,
+          },
+        },
+        Guest: true,
+        Property: true,
+        Payment: true,
+        BookingService: {
+          include: {
+            Service: true,
+          },
+        },
       },
     })
 
@@ -170,6 +237,194 @@ export class BookingService {
       data: bookings,
       timestamp: Date.now(),
     }
+  }
+
+  async findOne(bookingId: string, tenantId: string) {
+    return this.prisma.booking.findFirst({
+      where: { id: bookingId, tenantId },
+      include: {
+        BookingRoom: {
+          include: {
+            Room: {
+              include: {
+                RoomType: true,
+              }
+            },
+            RoomType: true,
+          },
+        },
+        Guest: true,
+        Property: true,
+        Payment: true,
+        Billing: true,
+        BookingService: {
+          include: {
+            Service: true,
+          },
+        },
+      },
+    });
+  }
+
+  async getServices(propertyId: string, tenantId: string) {
+    return this.prisma.service.findMany({
+      where: { propertyId, tenantId },
+    });
+  }
+
+  async getActiveBookingRooms(propertyId: string, tenantId: string) {
+    return this.prisma.bookingRoom.findMany({
+      where: {
+        Booking: {
+          propertyId,
+          tenantId,
+          status: {
+            notIn: ['CANCELLED', 'CHECKED_OUT'],
+          },
+        },
+      },
+      include: {
+        Booking: true,
+        Room: {
+          include: {
+            RoomType: true,
+          }
+        },
+        RoomType: true,
+      },
+    });
+  }
+
+  async findBookingsByProperty(propertyId: string, tenantId: string) {
+    return this.prisma.booking.findMany({
+      where: { propertyId, tenantId },
+      include: {
+        BookingRoom: true,
+        Guest: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async findBookingRoomsByProperty(propertyId: string, tenantId: string) {
+    return this.prisma.bookingRoom.findMany({
+      where: {
+        Booking: {
+          propertyId,
+          tenantId,
+        },
+        roomId: {
+          not: null,
+        },
+      },
+      include: {
+        Booking: {
+          include: {
+            Guest: true,
+            Property: true,
+          },
+        },
+        Room: true,
+        RoomType: true,
+      },
+    });
+  }
+
+  async addBookingRoom(
+    bookingId: string,
+    roomId: string | null,
+    roomTypeId: string,
+    checkInDate: string | null,
+    checkOutDate: string | null,
+  ) {
+    return this.prisma.bookingRoom.create({
+      data: {
+        bookingId,
+        roomId: roomId || null,
+        roomTypeId,
+        quantity: 1,
+        checkInDate: checkInDate ? new Date(checkInDate) : null,
+        checkOutDate: checkOutDate ? new Date(checkOutDate) : null,
+      },
+      include: {
+        Room: {
+          include: {
+            RoomType: true,
+          }
+        },
+        RoomType: true,
+      },
+    });
+  }
+
+  async updateBookingRoom(id: string, input: any) {
+    const data: any = {};
+    if (input.roomId !== undefined) data.roomId = input.roomId;
+    if (input.roomTypeId !== undefined) data.roomTypeId = input.roomTypeId;
+    if (input.priceOverride !== undefined) data.priceOverride = input.priceOverride;
+    if (input.checkInDate !== undefined) data.checkInDate = input.checkInDate ? new Date(input.checkInDate) : null;
+    if (input.checkOutDate !== undefined) data.checkOutDate = input.checkOutDate ? new Date(input.checkOutDate) : null;
+
+    return this.prisma.bookingRoom.update({
+      where: { id },
+      data,
+      include: {
+        Room: {
+          include: {
+            RoomType: true,
+          }
+        },
+        RoomType: true,
+      },
+    });
+  }
+
+  async deleteBookingRoom(id: string) {
+    await this.prisma.bookingRoom.delete({
+      where: { id },
+    });
+    return true;
+  }
+
+  async addBookingService(
+    bookingId: string,
+    serviceId: string,
+    quantity: number,
+    totalPrice: number,
+  ) {
+    return this.prisma.bookingService.create({
+      data: {
+        bookingId,
+        serviceId,
+        quantity,
+        totalPrice,
+      },
+      include: {
+        Service: true,
+      },
+    });
+  }
+
+  async updateBookingService(id: string, input: any) {
+    return this.prisma.bookingService.update({
+      where: { id },
+      data: {
+        quantity: input.quantity,
+        totalPrice: input.totalPrice,
+      },
+      include: {
+        Service: true,
+      },
+    });
+  }
+
+  async deleteBookingService(id: string) {
+    await this.prisma.bookingService.delete({
+      where: { id },
+    });
+    return true;
   }
 
   async updateBooking(bookingId: string, dto: any, tenantId: string) {
