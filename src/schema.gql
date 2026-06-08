@@ -251,6 +251,43 @@ type NightAuditResponse {
   timestamp: DateTime!
 }
 
+type PublicHotel {
+  id: ID!
+  name: String!
+  slug: String!
+  location: String!
+  area: String!
+  lat: Float!
+  lng: Float!
+  rating: Float!
+  rating_count: Int!
+  starting_price: Float!
+  amenities: String!
+  amenities_search: String!
+  cover_image: String!
+  image_urls: [String!]!
+  is_sponsored: Boolean!
+  is_active: Boolean!
+  created_at: String!
+}
+
+type PublicRoom {
+  id: ID!
+  hotel_id: String!
+  name: String!
+  description: String!
+  price: Float!
+  capacity: Int!
+  amenities: String!
+  amenities_search: String!
+  image_urls: [String!]!
+  check_in: String!
+  check_out: String!
+  rules: String!
+  cancellation_policy: String!
+  is_active: Boolean!
+}
+
 type User {
   id: ID!
   email: String!
@@ -306,6 +343,9 @@ type DevDropdownsResponse {
 }
 
 type Query {
+  getPublicHotels: [PublicHotel!]!
+  getPublicHotelBySlug(slug: String!): PublicHotel
+  getPublicRooms(hotelId: String!): [PublicRoom!]!
   properties: [Property!]!
   property(id: String!): Property
   roomTypes(propertyId: String!): [RoomType!]!
