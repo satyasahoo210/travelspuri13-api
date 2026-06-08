@@ -1,10 +1,10 @@
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { UseGuards } from '@nestjs/common';
-import { Args, ID, Mutation, Query, Resolver, Int, Float } from '@nestjs/graphql';
+import { Args, Float, ID, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { BookingService } from './booking.service';
 import { CreateBookingInput, UpdateBookingInput, UpdateBookingRoomInput, UpdateBookingServiceInput } from './dto/booking-input.type';
-import { Booking, SyncBookingsResponse, BookingRoom, BookingService as BookingServiceType, Service as ServiceType } from './dto/booking.type';
+import { Booking, BookingRoom, BookingService as BookingServiceType, Service as ServiceType, SyncBookingsResponse } from './dto/booking.type';
 
 @Resolver()
 @UseGuards(JwtAuthGuard)
@@ -76,10 +76,19 @@ export class BookingResolver {
 
   @Query(() => [Booking])
   async bookings(
-    @Args('propertyId', { type: () => String }) propertyId: string,
     @TenantId() tenantId: string,
+    @Args('propertyId', { type: () => String, nullable: true }) propertyId?: string,
+    @Args('guestId', { type: () => String, nullable: true }) guestId?: string,
   ): Promise<Booking[]> {
-    return this.bookingService.findBookingsByProperty(propertyId, tenantId) as any;
+    if(!propertyId && !guestId){
+      throw new Error('Property ID or Guest ID is required');
+    }
+
+    if(propertyId){
+      return this.bookingService.findBookingsByProperty(propertyId, tenantId) as any;
+    } else {
+      return this.bookingService.findBookingsByGuest(guestId!, tenantId) as any;
+    }
   }
 
   @Query(() => [BookingRoom])

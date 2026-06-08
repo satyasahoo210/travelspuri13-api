@@ -320,6 +320,24 @@ export class BookingService {
     });
   }
 
+  async findBookingsByGuest(guestId: string, tenantId: string) {
+    return this.prisma.booking.findMany({
+      where: { guestId, tenantId },
+      include: {
+        BookingRoom: {
+          include: {
+            Room: true,
+          },
+        },
+        Guest: true,
+        Payment: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async findBookingRoomsByProperty(propertyId: string, tenantId: string) {
     return this.prisma.bookingRoom.findMany({
       where: {

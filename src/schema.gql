@@ -356,7 +356,7 @@ type Query {
   booking(id: ID!): Booking
   services(propertyId: String!): [Service!]!
   activeBookingRooms(propertyId: String!): [BookingRoom!]!
-  bookings(propertyId: String!): [Booking!]!
+  bookings(propertyId: String, guestId: String): [Booking!]!
   bookingRooms(propertyId: String!): [BookingRoom!]!
   rateOverrides: [RateOverride!]!
   guests: [Guest!]!
