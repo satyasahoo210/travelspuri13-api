@@ -7,9 +7,18 @@ import { AppModule } from './app.module'
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
+  app.set('trust proxy', 1);
   app.enableShutdownHooks();
 
-  app.enableCors()
+  app.enableCors({
+    origin: [
+      'https://admin.travelspuri13.com',
+      'https://pms.travelspuri13.com',
+      'https://www.travelspuri13.com',
+      '*satyasahoo210s-projects.vercel.app'
+    ],
+    credentials: true,
+  });
 
   // Serve uploads statically
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
