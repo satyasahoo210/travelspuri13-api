@@ -199,7 +199,22 @@ export class BookingService {
         }
       }
 
-      // 2. Update Status
+      // 2. Update BookingRooms status to CANCELLED (only for active rooms)
+      for (const roomItem of booking.BookingRoom) {
+        if (roomItem.status === BookingStatus.CANCELLED || roomItem.status === BookingStatus.CHECKED_OUT) {
+          continue;
+        }
+
+        const roomCheckOutTime = roomItem.checkOutDate ? roomItem.checkOutDate.getTime() : null;
+        if (roomCheckOutTime === null || roomCheckOutTime === booking.checkOutDate.getTime()) {
+          await tx.bookingRoom.update({
+            where: { id: roomItem.id },
+            data: { status: BookingStatus.CANCELLED },
+          });
+        }
+      }
+
+      // 3. Update Status
       return tx.booking.update({
         where: { id: bookingId },
         data: { status: BookingStatus.CANCELLED },
@@ -238,6 +253,9 @@ export class BookingService {
           },
         },
       },
+      orderBy: {
+        checkInDate: 'desc'
+      }
     })
 
     return {
@@ -460,9 +478,74 @@ export class BookingService {
   async updateBooking(bookingId: string, dto: any, tenantId: string) {
     // Exclude relations from the raw database update data
     const { bookingRooms, billing, services, payments, orders, ...updateData } = dto;
-    return this.prisma.booking.update({
-      where: { id: bookingId, tenantId },
-      data: updateData,
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Fetch current booking to get the old dates and statuses
+      const currentBooking = await tx.booking.findFirst({
+        where: { id: bookingId, tenantId },
+        include: { BookingRoom: true },
+      });
+
+      if (!currentBooking) {
+        throw new NotFoundException(`Booking ${bookingId} not found`);
+      }
+
+      // 2. Perform the main booking update
+      const updatedBooking = await tx.booking.update({
+        where: { id: bookingId },
+        data: updateData,
+      });
+
+      // 3. Update active BookingRoom records based on old booking values
+      const oldCheckIn = currentBooking.checkInDate;
+      const oldCheckOut = currentBooking.checkOutDate;
+
+      for (const room of currentBooking.BookingRoom) {
+        // Skip rooms that are already cancelled or checked out
+        if (room.status === BookingStatus.CANCELLED || room.status === BookingStatus.CHECKED_OUT) {
+          continue;
+        }
+
+        const roomUpdates: any = {};
+
+        // Update checkInDate if it was changed and matches the old checkInDate
+        if (updateData.checkInDate !== undefined) {
+          const roomCheckInTime = room.checkInDate ? room.checkInDate.getTime() : null;
+          if (roomCheckInTime === null || roomCheckInTime === oldCheckIn.getTime()) {
+            roomUpdates.checkInDate = updateData.checkInDate ? new Date(updateData.checkInDate) : null;
+          }
+        }
+
+        // Update checkOutDate if it was changed and matches the old checkOutDate
+        if (updateData.checkOutDate !== undefined) {
+          const roomCheckOutTime = room.checkOutDate ? room.checkOutDate.getTime() : null;
+          if (roomCheckOutTime === null || roomCheckOutTime === oldCheckOut.getTime()) {
+            roomUpdates.checkOutDate = updateData.checkOutDate ? new Date(updateData.checkOutDate) : null;
+          }
+        }
+
+        // Update status if it was changed
+        if (updateData.status !== undefined) {
+          // If status changes to CHECKED_OUT, only update the room if its checkout date is the active checkout date
+          if (updateData.status === BookingStatus.CHECKED_OUT) {
+            const roomCheckOutTime = room.checkOutDate ? room.checkOutDate.getTime() : null;
+            if (roomCheckOutTime === null || roomCheckOutTime === oldCheckOut.getTime()) {
+              roomUpdates.status = updateData.status;
+            }
+          } else {
+            roomUpdates.status = updateData.status;
+          }
+        }
+
+        if (Object.keys(roomUpdates).length > 0) {
+          await tx.bookingRoom.update({
+            where: { id: room.id },
+            data: roomUpdates,
+          });
+        }
+      }
+
+      return updatedBooking;
     });
   }
 
