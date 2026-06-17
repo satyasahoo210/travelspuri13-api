@@ -342,6 +342,17 @@ type DevDropdownsResponse {
   bookings: String!
 }
 
+type RecentActivity {
+  id: ID!
+  propertyId: String!
+  tenantId: String!
+  title: String!
+  type: String!
+  staffName: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
 type Query {
   getPublicHotels: [PublicHotel!]!
   getPublicHotelBySlug(slug: String!): PublicHotel
@@ -373,6 +384,7 @@ type Query {
   messages(guestId: String!): [Message!]!
   devEntities(entity: String!, page: Int!, limit: Int!, search: String): DevEntitiesResponse!
   devDropdowns: DevDropdownsResponse!
+  recentActivities(propertyId: String!): [RecentActivity!]!
 }
 
 type Mutation {

@@ -38,10 +38,31 @@ export class BillingService {
     }
   }
 
-  async createPayment(paymentData: any) {
-    return this.prisma.payment.create({
+  async createPayment(paymentData: any, user?: any) {
+    const payment = await this.prisma.payment.create({
       data: paymentData,
     })
+
+    if (user) {
+      const booking = await this.prisma.booking.findUnique({
+        where: { id: paymentData.bookingId },
+        include: { Guest: true },
+      });
+      if (booking) {
+        const guestName = booking.Guest?.name || 'Guest';
+        await this.prisma.recentActivity.create({
+          data: {
+            propertyId: booking.propertyId,
+            tenantId: user.tenantId,
+            title: `Payment of ₹${paymentData.amount.toLocaleString('en-IN')} received for booking of ${guestName}`,
+            type: 'payment',
+            staffName: user.name || user.email || 'Staff',
+          }
+        }).catch(err => console.error('Failed to log payment activity:', err));
+      }
+    }
+
+    return payment;
   }
 
   async updatePayment(id: string, paymentData: any) {

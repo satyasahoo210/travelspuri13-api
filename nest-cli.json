@@ -10,6 +10,10 @@
       {
         "include": "prisma/generated/prisma/*",
         "outDir": "dist"
+      },
+      {
+        "include": "modules/booking/assets/**/*",
+        "outDir": "dist/src"
       }
     ]
   }

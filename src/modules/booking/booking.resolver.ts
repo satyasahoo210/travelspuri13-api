@@ -1,4 +1,5 @@
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { UseGuards } from '@nestjs/common';
 import { Args, Float, ID, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
@@ -15,8 +16,9 @@ export class BookingResolver {
   async createBooking(
     @Args('input') input: CreateBookingInput,
     @TenantId() tenantId: string,
+    @CurrentUser() user: any,
   ): Promise<Booking> {
-    const booking = await this.bookingService.createBooking(input, tenantId);
+    const booking = await this.bookingService.createBooking(input, tenantId, user);
     return booking as any;
   }
 
@@ -24,8 +26,9 @@ export class BookingResolver {
   async cancelBooking(
     @Args('id', { type: () => ID }) id: string,
     @TenantId() tenantId: string,
+    @CurrentUser() user: any,
   ): Promise<Booking> {
-    const booking = await this.bookingService.cancelBooking(id, tenantId);
+    const booking = await this.bookingService.cancelBooking(id, tenantId, user);
     return booking as any;
   }
 
@@ -45,8 +48,9 @@ export class BookingResolver {
     @Args('id', { type: () => ID }) id: string,
     @Args('input') input: UpdateBookingInput,
     @TenantId() tenantId: string,
+    @CurrentUser() user: any,
   ): Promise<Booking> {
-    const booking = await this.bookingService.updateBooking(id, input, tenantId);
+    const booking = await this.bookingService.updateBooking(id, input, tenantId, user);
     return booking as any;
   }
 

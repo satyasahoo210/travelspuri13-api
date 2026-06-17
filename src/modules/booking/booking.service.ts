@@ -20,7 +20,7 @@ export class BookingService {
     private pricingService: PricingService,
   ) {}
 
-  async createBooking(dto: CreateBookingDto, tenantId: string) {
+  async createBooking(dto: CreateBookingDto, tenantId: string, user?: any) {
     const {
       checkInDate,
       checkOutDate,
@@ -168,11 +168,25 @@ export class BookingService {
         },
       })
 
+      if (user) {
+        const guest = await tx.guest.findUnique({ where: { id: guestId } })
+        const guestName = guest?.name || 'Guest'
+        await tx.recentActivity.create({
+          data: {
+            propertyId,
+            tenantId,
+            title: `Booking created for ${guestName}`,
+            type: 'checkin',
+            staffName: user.name || user.email || 'Staff',
+          }
+        }).catch(err => console.error('Failed to log booking creation:', err))
+      }
+
       return booking
     })
   }
 
-  async cancelBooking(bookingId: string, tenantId: string) {
+  async cancelBooking(bookingId: string, tenantId: string, user?: any) {
     return this.prisma.$transaction(async (tx) => {
       const booking = await tx.booking.findFirst({
         where: { id: bookingId, tenantId },
@@ -216,10 +230,28 @@ export class BookingService {
       }
 
       // 3. Update Status
-      return tx.booking.update({
+      const cancelledBooking = await tx.booking.update({
         where: { id: bookingId },
         data: { status: BookingStatus.CANCELLED },
       })
+
+      if (user) {
+        const guest = await tx.guest.findUnique({
+          where: { id: booking.guestId }
+        })
+        const guestName = guest?.name || 'Guest'
+        await tx.recentActivity.create({
+          data: {
+            propertyId: booking.propertyId,
+            tenantId,
+            title: `Booking cancelled for ${guestName}`,
+            type: 'checkin',
+            staffName: user.name || user.email || 'Staff',
+          }
+        }).catch(err => console.error('Failed to log booking cancellation:', err))
+      }
+
+      return cancelledBooking
     })
   }
 
@@ -301,11 +333,14 @@ export class BookingService {
   async getActiveBookingRooms(propertyId: string, tenantId: string) {
     return this.prisma.bookingRoom.findMany({
       where: {
+        status: {
+          notIn: [BookingStatus.CANCELLED, BookingStatus.CHECKED_OUT],
+        },
         Booking: {
           propertyId,
           tenantId,
           status: {
-            notIn: ['CANCELLED', 'CHECKED_OUT'],
+            notIn: [BookingStatus.CANCELLED, BookingStatus.CHECKED_OUT],
           },
         },
       },
@@ -476,7 +511,7 @@ export class BookingService {
     return true;
   }
 
-  async updateBooking(bookingId: string, dto: any, tenantId: string) {
+  async updateBooking(bookingId: string, dto: any, tenantId: string, user?: any) {
     // Exclude relations from the raw database update data
     const { bookingRooms, billing, services, payments, orders, ...updateData } = dto;
 
@@ -546,6 +581,33 @@ export class BookingService {
         }
       }
 
+      if (user && updateData.status !== undefined && updateData.status !== currentBooking.status) {
+        const guest = await tx.guest.findUnique({
+          where: { id: currentBooking.guestId }
+        });
+        const guestName = guest?.name || 'Guest';
+        let actionText = '';
+        if (updateData.status === BookingStatus.CHECKED_IN) {
+          actionText = 'checked in';
+        } else if (updateData.status === BookingStatus.CHECKED_OUT) {
+          actionText = 'checked out';
+        } else if (updateData.status === BookingStatus.CANCELLED) {
+          actionText = 'cancelled';
+        } else {
+          actionText = `status set to ${updateData.status.toLowerCase()}`;
+        }
+
+        await tx.recentActivity.create({
+          data: {
+            propertyId: currentBooking.propertyId,
+            tenantId,
+            title: `${guestName} has been ${actionText}`,
+            type: 'checkin',
+            staffName: user.name || user.email || 'Staff',
+          }
+        }).catch(err => console.error('Failed to log booking status change:', err));
+      }
+
       return updatedBooking;
     });
   }
@@ -585,8 +647,18 @@ export class BookingService {
 
   private getDatesInRange(startDate: Date, endDate: Date): Date[] {
     const dates: Date[] = []
+    const endMidnight = new Date(endDate)
+    endMidnight.setUTCHours(0, 0, 0, 0)
+
     let currentDate = new Date(startDate)
-    while (currentDate <= endDate) {
+    while (true) {
+      const currentMidnight = new Date(currentDate)
+      currentMidnight.setUTCHours(0, 0, 0, 0)
+
+      if (currentMidnight > endMidnight) {
+        break
+      }
+
       dates.push(new Date(currentDate))
       currentDate.setDate(currentDate.getDate() + 1)
     }

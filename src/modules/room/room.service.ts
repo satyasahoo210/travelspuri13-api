@@ -98,18 +98,59 @@ export class RoomService {
     })
   }
 
-  async updateRoom(id: string, data: any) {
-    return this.prisma.room.update({
+  async updateRoom(id: string, data: any, user?: any) {
+    const room = await this.prisma.room.update({
       where: { id },
       data,
+      include: { RoomType: true },
     })
+
+    if (user) {
+      let type = 'maintenance';
+      let title = `Updated Room ${room.roomNumber}`;
+      if (data.housekeepingStatus) {
+        type = data.housekeepingStatus === 'READY' || data.housekeepingStatus === 'CLEANING' ? 'clean' : 'dirty';
+        title = `Room ${room.roomNumber} marked as ${data.housekeepingStatus}`;
+      } else if (data.status) {
+        title = `Room ${room.roomNumber} status set to ${data.status}`;
+      }
+
+      await this.prisma.recentActivity.create({
+        data: {
+          propertyId: room.RoomType.propertyId,
+          tenantId: user.tenantId,
+          title,
+          type,
+          staffName: user.name || user.email || 'Staff',
+        }
+      }).catch(err => console.error('Failed to log activity:', err));
+    }
+
+    return room
   }
 
-  async updateRoomStatus(id: string, status: any) {
-    return this.prisma.room.update({
+  async updateRoomStatus(id: string, status: any, user?: any) {
+    const room = await this.prisma.room.update({
       where: { id },
       data: { housekeepingStatus: status },
+      include: { RoomType: true },
     })
+
+    if (user) {
+      const type = status === 'READY' || status === 'CLEANING' ? 'clean' : 'dirty';
+      const title = `Room ${room.roomNumber} marked as ${status}`;
+      await this.prisma.recentActivity.create({
+        data: {
+          propertyId: room.RoomType.propertyId,
+          tenantId: user.tenantId,
+          title,
+          type,
+          staffName: user.name || user.email || 'Staff',
+        }
+      }).catch(err => console.error('Failed to log activity:', err));
+    }
+
+    return room
   }
 
   async updateRoomType(id: string, data: any) {

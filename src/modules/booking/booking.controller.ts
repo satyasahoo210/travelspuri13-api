@@ -1,8 +1,8 @@
 import { TenantId } from '@/common/decorators/tenant-id.decorator'
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
 import { Body, Controller, Get, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common'
-import { Response } from 'express'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { Response } from 'express'
 import { BookingService } from './booking.service'
 import { CreateBookingDto } from './dto/booking.dto'
 

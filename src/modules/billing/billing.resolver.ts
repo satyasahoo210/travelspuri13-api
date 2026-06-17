@@ -1,4 +1,5 @@
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { PaymentStatus } from '@/generated/prisma/client';
 import { UseGuards } from '@nestjs/common';
@@ -51,8 +52,9 @@ export class BillingResolver {
   @Mutation(() => Payment)
   async createPayment(
     @Args('input') input: CreatePaymentInput,
+    @CurrentUser() user: any,
   ): Promise<Payment> {
-    const payment = await this.billingService.createPayment(input);
+    const payment = await this.billingService.createPayment(input, user);
     return payment as any;
   }
 

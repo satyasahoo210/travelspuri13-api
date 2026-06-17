@@ -82,9 +82,18 @@ export class PricingService {
 
   private getDatesInRange(startDate: Date, endDate: Date): Date[] {
     const dates: Date[] = []
+    const endMidnight = new Date(endDate)
+    endMidnight.setUTCHours(0, 0, 0, 0)
+
     let currentDate = new Date(startDate)
-    // Pricing is calculated per night, so we don't include the check-out date
-    while (currentDate < endDate) {
+    while (true) {
+      const currentMidnight = new Date(currentDate)
+      currentMidnight.setUTCHours(0, 0, 0, 0)
+
+      if (currentMidnight >= endMidnight) {
+        break
+      }
+
       dates.push(new Date(currentDate))
       currentDate.setDate(currentDate.getDate() + 1)
     }

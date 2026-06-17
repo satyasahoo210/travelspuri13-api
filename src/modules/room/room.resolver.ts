@@ -1,3 +1,4 @@
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { HousekeepingStatus } from '@/generated/prisma/client';
@@ -69,8 +70,9 @@ export class RoomResolver {
   async updateRoom(
     @Args('id', { type: () => ID }) id: string,
     @Args('input') input: UpdateRoomInput,
+    @CurrentUser() user: any,
   ): Promise<Room> {
-    const room = await this.roomService.updateRoom(id, input);
+    const room = await this.roomService.updateRoom(id, input, user);
     return room as any;
   }
 
@@ -86,8 +88,9 @@ export class RoomResolver {
   async updateRoomStatus(
     @Args('id', { type: () => ID }) id: string,
     @Args('status', { type: () => HousekeepingStatus }) status: HousekeepingStatus,
+    @CurrentUser() user: any,
   ): Promise<Room> {
-    const room = await this.roomService.updateRoomStatus(id, status);
+    const room = await this.roomService.updateRoomStatus(id, status, user);
     return room as any;
   }
 }

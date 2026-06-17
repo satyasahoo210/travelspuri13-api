@@ -57,15 +57,29 @@ export class InventoryService {
     date: Date,
     quantity: number,
   ) {
-    return tx.inventory.update({
+    const client = tx || this.prisma
+    const inventory = await client.inventory.findUnique({
       where: {
         roomTypeId_date: {
           roomTypeId,
           date,
         },
       },
+    })
+
+    if (!inventory) {
+      // If the inventory record doesn't exist, we don't need to increment it.
+      return
+    }
+
+    const newAvailable = Math.min(inventory.totalRooms, inventory.availableRooms + quantity)
+
+    return client.inventory.update({
+      where: {
+        id: inventory.id,
+      },
       data: {
-        availableRooms: { increment: quantity },
+        availableRooms: newAvailable,
       },
     })
   }
@@ -103,8 +117,18 @@ export class InventoryService {
 
   private getDatesInRange(startDate: Date, endDate: Date): Date[] {
     const dates: Date[] = []
+    const endMidnight = new Date(endDate)
+    endMidnight.setUTCHours(0, 0, 0, 0)
+
     let currentDate = new Date(startDate)
-    while (currentDate <= endDate) {
+    while (true) {
+      const currentMidnight = new Date(currentDate)
+      currentMidnight.setUTCHours(0, 0, 0, 0)
+
+      if (currentMidnight > endMidnight) {
+        break
+      }
+
       dates.push(new Date(currentDate))
       currentDate.setDate(currentDate.getDate() + 1)
     }

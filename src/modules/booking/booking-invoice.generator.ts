@@ -1,7 +1,7 @@
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { differenceInCalendarDays, format } from 'date-fns'
 import * as fs from 'fs'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import * as path from 'path'
 
 // Helper function to convert numeric amount to Indian Rupee Words
@@ -205,9 +205,12 @@ export async function generateInvoiceBuffer(booking: any): Promise<Buffer> {
     : 0
   const grandTotal = subtotal - discount + tax
 
-  const totalPaid = payments
-    .filter((p: any) => ['PAID', 'PARTIAL'].includes(p.status || ''))
-    .reduce((sum: number, p: any) => sum + Number(p.amount), 0)
+  const totalPaid = payments.reduce((sum: number, p: any) => {
+    if (p.status === 'REFUNDED') {
+      return sum - Number(p.amount)
+    }
+    return sum + Number(p.amount)
+  }, 0)
   const balance = Math.max(0, grandTotal - totalPaid)
 
   // --- 1. Header Block ---
@@ -509,9 +512,11 @@ export async function generateInvoiceBuffer(booking: any): Promise<Buffer> {
 
     const paymentData = payments.map((p: any) => [
       format(new Date(p.createdAt ?? ''), 'dd MMM yyyy, hh:mm a'),
-      p.method || 'N/A',
+      p.status === 'REFUNDED' ? `Refund (${p.method || 'N/A'})` : (p.method || 'N/A'),
       `#${p.id.slice(0, 8).toUpperCase()}`,
-      `INR ${Number(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+      p.status === 'REFUNDED'
+        ? `- INR ${Number(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+        : `INR ${Number(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
     ])
 
     autoTable(doc, {

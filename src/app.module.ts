@@ -26,6 +26,7 @@ import { UserModule } from './modules/user/user.module';
 import { ExpenseModule } from './modules/expense/expense.module';
 import { MessageModule } from './modules/message/message.module';
 import { DevDbModule } from './modules/dev-db/dev-db.module';
+import { ActivityModule } from './modules/activity/activity.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { DevDbModule } from './modules/dev-db/dev-db.module';
     ExpenseModule,
     MessageModule,
     DevDbModule,
+    ActivityModule,
   ],
   controllers: [HealthController]
 })
