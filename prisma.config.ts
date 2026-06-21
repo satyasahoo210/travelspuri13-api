@@ -1,10 +1,10 @@
 import { config } from 'dotenv'
-config({ path: '.env.local' })
 import { defineConfig, env } from 'prisma/config'
+config({ path: ['.env.local', '.env'] })
 
 export default defineConfig({
   schema: './prisma/schema.prisma',
   datasource: {
-    url: env('DATABASE_URL'),
+    url: env('DIRECT_URL'),
   },
 })
