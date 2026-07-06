@@ -57,6 +57,7 @@ export class DevDbResolver {
       Property: ['name', 'address'],
       RoomType: ['name'],
       Room: ['roomNumber'],
+      Booking: ['Guest.name'],
       Employee: ['name', 'email'],
       Guest: ['name', 'phone', 'email'],
       Service: ['name'],
@@ -68,13 +69,32 @@ export class DevDbResolver {
 
     const where: any = {};
     if (search && searchFields[entity]) {
-      where.OR = searchFields[entity].map((field) => ({
-        [field]: {
-          contains: search,
-          mode: 'insensitive',
-        },
-      }));
+      where.OR = searchFields[entity].map((field) => {
+        if(field.includes('.')) {
+          const nestedFields = field.split('.');
+          const nestedObj: any = {};
+          let currentObj = nestedObj;
+          for(let i = 0; i < nestedFields.length - 1; i++) {
+            currentObj[nestedFields[i]] = {};
+            currentObj = currentObj[nestedFields[i]];
+          }
+          currentObj[nestedFields[nestedFields.length - 1]] = {
+            contains: search,
+            mode: 'insensitive',
+          };
+          return nestedObj;
+        } else {
+          return {
+            [field]: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          };
+        }
+      });
     }
+
+    console.log(model, where);
 
     if (user.role !== UserRole.SUPER_ADMIN) {
       Object.assign(where, this.getTenantFilter(entity, user.tenantId));

@@ -9,7 +9,6 @@ import {
 import { InventoryService } from '../inventory/inventory.service'
 import { PricingService } from '../pricing/pricing.service'
 import { CreateBookingDto } from './dto/booking.dto'
-import { generateInvoiceBuffer } from './booking-invoice.generator'
 
 @Injectable()
 export class BookingService {
@@ -612,38 +611,7 @@ export class BookingService {
     });
   }
 
-  async getInvoicePDF(bookingId: string, tenantId: string): Promise<Buffer> {
-    const booking = await this.prisma.booking.findFirst({
-      where: { id: bookingId, tenantId },
-      include: {
-        BookingRoom: {
-          include: {
-            Room: {
-              include: {
-                RoomType: true,
-              }
-            },
-            RoomType: true,
-          },
-        },
-        Guest: true,
-        Property: true,
-        Payment: true,
-        Billing: true,
-        BookingService: {
-          include: {
-            Service: true,
-          },
-        },
-      },
-    });
 
-    if (!booking) {
-      throw new NotFoundException(`Booking ${bookingId} not found`);
-    }
-
-    return generateInvoiceBuffer(booking);
-  }
 
   private getDatesInRange(startDate: Date, endDate: Date): Date[] {
     const dates: Date[] = []

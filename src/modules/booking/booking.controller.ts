@@ -1,8 +1,7 @@
 import { TenantId } from '@/common/decorators/tenant-id.decorator'
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard'
-import { Body, Controller, Get, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
-import { Response } from 'express'
 import { BookingService } from './booking.service'
 import { CreateBookingDto } from './dto/booking.dto'
 
@@ -38,21 +37,5 @@ export class BookingController {
     return this.bookingService.updateBooking(id, updateBookingDto, tenantId)
   }
 
-  @Get(':id/invoice')
-  @ApiOperation({ summary: 'Generate and download invoice for a booking' })
-  async downloadInvoice(
-    @Param('id') id: string,
-    @TenantId() tenantId: string,
-    @Res() res: Response,
-  ) {
-    const pdfBuffer = await this.bookingService.getInvoicePDF(id, tenantId)
-    
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="Invoice_${id.slice(0, 8)}.pdf"`,
-      'Content-Length': pdfBuffer.length.toString(),
-    })
-    
-    res.end(pdfBuffer)
-  }
+
 }
