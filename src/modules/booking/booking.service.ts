@@ -362,6 +362,7 @@ export class BookingService {
         BookingRoom: {
           include: {
             Room: true,
+            RoomType: true,
           },
         },
         Guest: true,
@@ -380,6 +381,7 @@ export class BookingService {
         BookingRoom: {
           include: {
             Room: true,
+            RoomType: true,
           },
         },
         Guest: true,
