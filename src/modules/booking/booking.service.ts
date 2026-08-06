@@ -367,6 +367,11 @@ export class BookingService {
         },
         Guest: true,
         Payment: true,
+        BookingService: {
+          include: {
+            Service: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -386,6 +391,11 @@ export class BookingService {
         },
         Guest: true,
         Payment: true,
+        BookingService: {
+          include: {
+            Service: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
