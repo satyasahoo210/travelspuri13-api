@@ -434,53 +434,70 @@ export class BookingService {
     checkInDate: string | null,
     checkOutDate: string | null,
   ) {
-    return this.prisma.bookingRoom.create({
-      data: {
-        bookingId,
-        roomId: roomId || null,
-        roomTypeId,
-        quantity: 1,
-        checkInDate: checkInDate ? new Date(checkInDate) : null,
-        checkOutDate: checkOutDate ? new Date(checkOutDate) : null,
-      },
-      include: {
-        Room: {
-          include: {
-            RoomType: true,
-          }
+    return this.prisma.$transaction(async (tx) => {
+      const room = await tx.bookingRoom.create({
+        data: {
+          bookingId,
+          roomId: roomId || null,
+          roomTypeId,
+          quantity: 1,
+          checkInDate: checkInDate ? new Date(checkInDate) : null,
+          checkOutDate: checkOutDate ? new Date(checkOutDate) : null,
         },
-        RoomType: true,
-      },
+        include: {
+          Room: {
+            include: {
+              RoomType: true,
+            }
+          },
+          RoomType: true,
+        },
+      });
+      await this.recalculateBookingTotal(bookingId, tx);
+      return room;
     });
   }
 
   async updateBookingRoom(id: string, input: any) {
-    const data: any = {};
-    if (input.roomId !== undefined) data.roomId = input.roomId;
-    if (input.roomTypeId !== undefined) data.roomTypeId = input.roomTypeId;
-    if (input.priceOverride !== undefined) data.priceOverride = input.priceOverride;
-    if (input.checkInDate !== undefined) data.checkInDate = input.checkInDate ? new Date(input.checkInDate) : null;
-    if (input.checkOutDate !== undefined) data.checkOutDate = input.checkOutDate ? new Date(input.checkOutDate) : null;
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.bookingRoom.findUnique({ where: { id } });
+      if (!current) throw new NotFoundException(`Booking room ${id} not found`);
 
-    return this.prisma.bookingRoom.update({
-      where: { id },
-      data,
-      include: {
-        Room: {
-          include: {
-            RoomType: true,
-          }
+      const data: any = {};
+      if (input.roomId !== undefined) data.roomId = input.roomId;
+      if (input.roomTypeId !== undefined) data.roomTypeId = input.roomTypeId;
+      if (input.priceOverride !== undefined) data.priceOverride = input.priceOverride;
+      if (input.checkInDate !== undefined) data.checkInDate = input.checkInDate ? new Date(input.checkInDate) : null;
+      if (input.checkOutDate !== undefined) data.checkOutDate = input.checkOutDate ? new Date(input.checkOutDate) : null;
+
+      const room = await tx.bookingRoom.update({
+        where: { id },
+        data,
+        include: {
+          Room: {
+            include: {
+              RoomType: true,
+            }
+          },
+          RoomType: true,
         },
-        RoomType: true,
-      },
+      });
+      await this.recalculateBookingTotal(current.bookingId, tx);
+      return room;
     });
   }
 
   async deleteBookingRoom(id: string) {
-    await this.prisma.bookingRoom.delete({
-      where: { id },
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.bookingRoom.findUnique({ where: { id } });
+      if (!current) throw new NotFoundException(`Booking room ${id} not found`);
+
+      await tx.bookingRoom.delete({
+        where: { id },
+      });
+      await this.recalculateBookingTotal(current.bookingId, tx);
+      return true;
     });
-    return true;
   }
 
   async addBookingService(
@@ -489,37 +506,54 @@ export class BookingService {
     quantity: number,
     totalPrice: number,
   ) {
-    return this.prisma.bookingService.create({
-      data: {
-        bookingId,
-        serviceId,
-        quantity,
-        totalPrice,
-      },
-      include: {
-        Service: true,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const svc = await tx.bookingService.create({
+        data: {
+          bookingId,
+          serviceId,
+          quantity,
+          totalPrice,
+        },
+        include: {
+          Service: true,
+        },
+      });
+      await this.recalculateBookingTotal(bookingId, tx);
+      return svc;
     });
   }
 
   async updateBookingService(id: string, input: any) {
-    return this.prisma.bookingService.update({
-      where: { id },
-      data: {
-        quantity: input.quantity,
-        totalPrice: input.totalPrice,
-      },
-      include: {
-        Service: true,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.bookingService.findUnique({ where: { id } });
+      if (!current) throw new NotFoundException(`Booking service ${id} not found`);
+
+      const svc = await tx.bookingService.update({
+        where: { id },
+        data: {
+          quantity: input.quantity,
+          totalPrice: input.totalPrice,
+        },
+        include: {
+          Service: true,
+        },
+      });
+      await this.recalculateBookingTotal(current.bookingId, tx);
+      return svc;
     });
   }
 
   async deleteBookingService(id: string) {
-    await this.prisma.bookingService.delete({
-      where: { id },
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.bookingService.findUnique({ where: { id } });
+      if (!current) throw new NotFoundException(`Booking service ${id} not found`);
+
+      await tx.bookingService.delete({
+        where: { id },
+      });
+      await this.recalculateBookingTotal(current.bookingId, tx);
+      return true;
     });
-    return true;
   }
 
   async updateBooking(bookingId: string, dto: any, tenantId: string, user?: any) {
@@ -619,11 +653,83 @@ export class BookingService {
         }).catch(err => console.error('Failed to log booking status change:', err));
       }
 
-      return updatedBooking;
+      await this.recalculateBookingTotal(bookingId, tx);
+
+      return tx.booking.findUnique({
+        where: { id: bookingId },
+      });
     });
   }
 
 
+
+  async recalculateBookingTotal(bookingId: string, tx: any) {
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        BookingRoom: {
+          include: {
+            RoomType: true,
+          },
+        },
+        BookingService: true,
+        Property: true,
+      },
+    });
+
+    if (!booking) return;
+
+    let totalBaseAmount = 0;
+    for (const room of booking.BookingRoom) {
+      if (room.status === 'CANCELLED') continue;
+      const start = new Date(room.checkInDate || booking.checkInDate);
+      const end = new Date(room.checkOutDate || booking.checkOutDate);
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      let calcNights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      calcNights = Math.max(1, calcNights);
+
+      let roomNightsCharge = 0;
+      if (room.priceOverride !== null) {
+        const rate = Number(room.priceOverride);
+        roomNightsCharge = rate * calcNights;
+        if (booking.waiveLastDayCharge && calcNights > 1) {
+          roomNightsCharge -= rate;
+        }
+      } else {
+        const defaultPrice = room.RoomType?.defaultPrice ?? 0;
+        roomNightsCharge = defaultPrice * calcNights;
+        if (booking.waiveLastDayCharge && calcNights > 1) {
+          roomNightsCharge -= defaultPrice;
+        }
+      }
+      totalBaseAmount += roomNightsCharge;
+    }
+
+    let serviceSubtotal = 0;
+    for (const service of booking.BookingService) {
+      serviceSubtotal += service.totalPrice;
+    }
+
+    const subtotal = totalBaseAmount + serviceSubtotal;
+
+    let discountAmount = 0;
+    if (booking.discountType === 'PERCENTAGE') {
+      discountAmount = (subtotal * (booking.discountAmount ?? 0)) / 100;
+    } else if (booking.discountType === 'FIXED') {
+      discountAmount = booking.discountAmount ?? 0;
+    }
+
+    const afterDiscount = subtotal - discountAmount;
+    const taxAmount = (afterDiscount * (booking.Property?.taxPercentage ?? 0)) / 100;
+    const grandTotal = afterDiscount + taxAmount;
+
+    await tx.booking.update({
+      where: { id: bookingId },
+      data: {
+        totalAmount: grandTotal,
+      },
+    });
+  }
 
   private getDatesInRange(startDate: Date, endDate: Date): Date[] {
     const dates: Date[] = []
