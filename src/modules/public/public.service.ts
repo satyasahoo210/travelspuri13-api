@@ -1,5 +1,14 @@
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { PropertyGetPayload, RoomTypeGetPayload } from '@/generated/prisma/models';
 import { Injectable, NotFoundException } from '@nestjs/common';
+
+type RoomTypeWithProperty = RoomTypeGetPayload<{
+  include: { Property: true };
+}>;
+
+type PropertyWithRoomType = PropertyGetPayload<{
+  include: { RoomType: true };
+}>;
 
 @Injectable()
 export class PublicService {
@@ -39,12 +48,13 @@ export class PublicService {
   async getRooms(propertyId: string) {
     const roomTypes = await this.prisma.roomType.findMany({
       where: { propertyId },
+      include: { Property: true },
     });
 
     return roomTypes.map((rt) => this.mapRoomTypeToRoom(rt));
   }
 
-  private mapPropertyToHotel(property: any) {
+  private mapPropertyToHotel(property: PropertyWithRoomType) {
     const settings = (property.settings as any) || {};
     const slug = property.name
       .toLowerCase()
@@ -52,8 +62,8 @@ export class PublicService {
       .replace(/(^-|-$)/g, '');
 
     let startingPrice = 0;
-    if (property.roomTypes && property.roomTypes.length > 0) {
-      const prices = property.roomTypes.map((rt) => Number(rt.defaultPrice));
+    if (property.RoomType && property.RoomType.length > 0) {
+      const prices = property.RoomType.map((rt) => Number(rt.defaultPrice));
       startingPrice = Math.min(...prices);
     }
 
@@ -76,12 +86,12 @@ export class PublicService {
       image_urls: property.photos || [],
       is_sponsored: settings.is_sponsored === true || settings.is_sponsored === 'TRUE',
       is_active: true,
-      created_at: property.createdAt.toISOString(),
+      created_at: property.createdAt?.toISOString(),
     };
   }
 
-  private mapRoomTypeToRoom(roomType: any) {
-    const settings = (roomType.settings as any) || {};
+  private mapRoomTypeToRoom(roomType: RoomTypeWithProperty) {
+    const settings = (roomType.Property.settings as any) || {};
     return {
       id: roomType.id,
       hotel_id: roomType.propertyId,
